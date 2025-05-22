@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -35,19 +36,12 @@
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
@@ -97,5 +91,55 @@
 
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .win98-btn {
+    @apply bg-win98-gray border-solid border-t-win98-btnhighlight border-l-win98-btnhighlight border-b-win98-btnshadow border-r-win98-btnshadow shadow-win98-out px-3 py-1 font-ms-sans text-win98-btntext text-sm;
+  }
+
+  .win98-btn:active {
+    @apply shadow-win98-in border-t-win98-btnshadow border-l-win98-btnshadow border-b-win98-btnhighlight border-r-win98-btnhighlight;
+  }
+
+  .win98-window {
+    @apply bg-win98-gray border-solid border-2 border-t-win98-btnhighlight border-l-win98-btnhighlight border-b-win98-btnshadow border-r-win98-btnshadow;
+  }
+
+  .win98-window-title {
+    @apply bg-win98-blue text-white font-bold px-2 py-1 flex justify-between items-center;
+  }
+
+  .win98-input {
+    @apply bg-white border-solid border-t-win98-btnshadow border-l-win98-btnshadow border-b-win98-btnhighlight border-r-win98-btnhighlight shadow-win98-in px-2 py-1 font-ms-sans text-win98-text;
+  }
+
+  .win98-taskbar {
+    @apply bg-win98-gray border-solid border-t-win98-btnshadow border-b-win98-btnhighlight border-l-0 border-r-0 fixed bottom-0 left-0 right-0 z-50;
+  }
+
+  .win98-start-btn {
+    @apply bg-win98-gray border-solid border-t-win98-btnhighlight border-l-win98-btnhighlight border-b-win98-btnshadow border-r-win98-btnshadow shadow-win98-out px-2 py-1 flex items-center gap-1 font-ms-sans font-bold text-win98-btntext;
+  }
+
+  .win98-start-btn:active, .win98-start-btn.active {
+    @apply shadow-win98-in border-t-win98-btnshadow border-l-win98-btnshadow border-b-win98-btnhighlight border-r-win98-btnhighlight;
+  }
+
+  .win98-desktop-icon {
+    @apply flex flex-col items-center justify-center gap-1 w-20 p-1 cursor-pointer text-center;
+  }
+
+  .win98-desktop-icon:hover, .win98-desktop-icon:focus {
+    @apply bg-win98-highlight text-white;
+  }
+
+  .win98-start-menu {
+    @apply bg-win98-gray border-solid border-t-win98-btnhighlight border-l-win98-btnhighlight border-b-win98-btnshadow border-r-win98-btnshadow shadow-win98-out absolute bottom-full left-0 mb-1 w-64 z-50;
+  }
+
+  .win98-start-menu-item {
+    @apply flex items-center gap-2 px-4 py-2 hover:bg-win98-highlight hover:text-white cursor-pointer;
   }
 }

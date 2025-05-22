@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,7 +62,25 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				win98: {
+					'desktop': '#008080',
+					'gray': '#c0c0c0',
+					'darkgray': '#808080',
+					'lightgray': '#dfdfdf',
+					'blue': '#000080',
+					'highlight': '#000080',
+					'text': '#000000',
+					'btnface': '#c0c0c0',
+					'btntext': '#000000',
+					'btnhighlight': '#ffffff',
+					'btnshadow': '#808080',
+					'graytext': '#808080',
+					'window': '#ffffff'
 				}
+			},
+			fontFamily: {
+				'ms-sans': ['MS Sans Serif', 'Tahoma', 'Verdana', 'sans-serif']
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -89,6 +108,10 @@ export default {
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out'
+			},
+			boxShadow: {
+				'win98-out': 'inset -1px -1px #0a0a0a, inset 1px 1px #ffffff, inset -2px -2px #808080, inset 2px 2px #dfdfdf',
+				'win98-in': 'inset -1px -1px #ffffff, inset 1px 1px #0a0a0a, inset -2px -2px #dfdfdf, inset 2px 2px #808080'
 			}
 		}
 	},
