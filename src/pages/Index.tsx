@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Win98SearchBar from '../components/Win98SearchBar';
 import Win98Taskbar from '../components/Win98Taskbar';
@@ -12,6 +12,7 @@ const Index = () => {
   const navigate = useNavigate();
   const [searchBarPosition, setSearchBarPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number }>({ startX: 0, startY: 0, startPosX: 0, startPosY: 0 });
 
   const handleSearch = (query: string) => {
     if (query.trim() === '') {
@@ -60,37 +61,62 @@ const Index = () => {
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startPosX: searchBarPosition.x,
+      startPosY: searchBarPosition.y
+    };
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDragging) {
-      setSearchBarPosition({
-        x: e.clientX - 250, // Center the search bar on the cursor horizontally
-        y: e.clientY - 25  // Adjust vertical position to keep cursor on the title bar
-      });
-    }
+    if (!isDragging) return;
+    
+    const deltaX = e.clientX - dragRef.current.startX;
+    const deltaY = e.clientY - dragRef.current.startY;
+    
+    setSearchBarPosition({
+      x: dragRef.current.startPosX + deltaX,
+      y: dragRef.current.startPosY + deltaY
+    });
   };
 
   const handleMouseUp = () => {
     setIsDragging(false);
   };
 
-  // Add event listeners for mouse events when component mounts
-  React.useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove as unknown as EventListener);
-      document.addEventListener('mouseup', handleMouseUp);
-    }
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (isDragging) {
+        setIsDragging(false);
+      }
+    };
+
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (isDragging) {
+        const deltaX = e.clientX - dragRef.current.startX;
+        const deltaY = e.clientY - dragRef.current.startY;
+        
+        setSearchBarPosition({
+          x: dragRef.current.startPosX + deltaX,
+          y: dragRef.current.startPosY + deltaY
+        });
+      }
+    };
+
+    // Add global event listeners
+    window.addEventListener('mousemove', handleGlobalMouseMove);
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove as unknown as EventListener);
-      document.removeEventListener('mouseup', handleMouseUp);
+      // Remove global event listeners on cleanup
+      window.removeEventListener('mousemove', handleGlobalMouseMove);
+      window.removeEventListener('mouseup', handleGlobalMouseUp);
     };
   }, [isDragging]);
 
   return (
-    <div className="min-h-screen bg-win98-desktop flex flex-col overflow-hidden" 
-         onMouseMove={isDragging ? handleMouseMove : undefined}
-         onMouseUp={isDragging ? handleMouseUp : undefined}>
+    <div className="min-h-screen bg-win98-desktop flex flex-col overflow-hidden">
       {/* Desktop */}
       <div className="flex-grow p-4">
         {/* Desktop Icons */}
@@ -109,9 +135,9 @@ const Index = () => {
         <div 
           className="absolute"
           style={{ 
-            left: `calc(50% + ${searchBarPosition.x}px)`, 
-            top: `calc(50% + ${searchBarPosition.y}px)`,
-            transform: 'translate(-50%, -50%)'
+            left: `${searchBarPosition.x}px`, 
+            top: `${searchBarPosition.y}px`,
+            transform: 'none'
           }}
         >
           <div 
