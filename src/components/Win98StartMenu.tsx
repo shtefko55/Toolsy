@@ -1,11 +1,17 @@
 
 import React, { useState } from 'react';
-import { Search } from 'lucide-react';
+import { Search, FileText, Type, TextCursor } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface StartMenuItem {
   id: string;
   label: string;
   icon?: React.ReactNode;
+}
+
+interface StartMenuSection {
+  title: string;
+  items: StartMenuItem[];
 }
 
 interface Win98StartMenuProps {
@@ -14,14 +20,21 @@ interface Win98StartMenuProps {
 }
 
 const menuItems: StartMenuItem[] = [
-  { id: 'programs', label: 'Programs' },
-  { id: 'documents', label: 'Documents' },
   { id: 'settings', label: 'Settings' },
   { id: 'search', label: 'Search', icon: <Search className="h-4 w-4" /> },
   { id: 'help', label: 'Help' },
   { id: 'run', label: 'Run...' },
   { id: 'shutdown', label: 'Shut Down...' },
 ];
+
+const textTools: StartMenuSection = {
+  title: "Text Processing Tools",
+  items: [
+    { id: 'notepad', label: 'Notepad', icon: <FileText className="h-4 w-4" /> },
+    { id: 'wordpad', label: 'WordPad', icon: <TextCursor className="h-4 w-4" /> },
+    { id: 'wordprocessor', label: 'Word Processor', icon: <Type className="h-4 w-4" /> },
+  ]
+};
 
 const Win98StartMenu: React.FC<Win98StartMenuProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
@@ -33,10 +46,26 @@ const Win98StartMenu: React.FC<Win98StartMenuProps> = ({ isOpen, onClose }) => {
           Windows 98
         </div>
       </div>
+      
       <div className="pl-12 py-1">
+        {/* Text Processing Tools Section */}
+        <div className="mb-2">
+          <div className="text-sm font-bold px-2 py-1">{textTools.title}</div>
+          {textTools.items.map(item => (
+            <div key={item.id} className="win98-start-menu-item">
+              {item.icon && <span className="mr-2">{item.icon}</span>}
+              <span>{item.label}</span>
+            </div>
+          ))}
+        </div>
+        
+        {/* Separator */}
+        <div className="border-t border-win98-shadow my-1"></div>
+        
+        {/* Regular Menu Items */}
         {menuItems.map(item => (
           <div key={item.id} className="win98-start-menu-item">
-            {item.icon && <span>{item.icon}</span>}
+            {item.icon && <span className="mr-2">{item.icon}</span>}
             <span>{item.label}</span>
           </div>
         ))}
