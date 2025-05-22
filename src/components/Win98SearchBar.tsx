@@ -19,19 +19,19 @@ const searchSuggestions: SearchSuggestion[] = [
   { 
     id: 'text-converter', 
     label: 'Text Case Converter', 
-    path: '/text-converter', 
+    path: '/text-tools/text-converter', 
     keywords: ['text', 'case', 'converter', 'uppercase', 'lowercase', 'sentence']
   },
   { 
     id: 'notepad', 
     label: 'Notepad', 
-    path: '/text-converter', 
+    path: '/text-tools/text-converter', 
     keywords: ['notepad', 'text', 'editor', 'note']
   },
   { 
     id: 'wordpad', 
     label: 'WordPad', 
-    path: '/text-converter', 
+    path: '/text-tools/text-converter', 
     keywords: ['wordpad', 'text', 'document', 'word']
   },
 ];
@@ -93,14 +93,6 @@ const Win98SearchBar: React.FC<Win98SearchBarProps> = ({ onSearch }) => {
 
   return (
     <div className="win98-window max-w-md w-full" ref={searchBarRef}>
-      <div className="win98-window-title">
-        <div className="text-sm font-ms-sans">Search</div>
-        <div className="flex gap-1">
-          <button className="bg-win98-gray text-win98-text w-5 h-5 flex items-center justify-center border border-win98-btnshadow leading-none">_</button>
-          <button className="bg-win98-gray text-win98-text w-5 h-5 flex items-center justify-center border border-win98-btnshadow leading-none">□</button>
-          <button className="bg-win98-gray text-win98-text w-5 h-5 flex items-center justify-center border border-win98-btnshadow leading-none">×</button>
-        </div>
-      </div>
       <div className="p-4 bg-win98-btnface">
         <div className="flex items-center gap-2">
           <div className="relative w-full">

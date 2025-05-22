@@ -32,9 +32,9 @@ const menuItems: StartMenuItem[] = [
 const textTools: StartMenuSection = {
   title: "Text Processing Tools",
   items: [
-    { id: 'notepad', label: 'Notepad', icon: <FileText className="h-4 w-4" />, path: '/text-converter' },
-    { id: 'wordpad', label: 'WordPad', icon: <TextCursor className="h-4 w-4" />, path: '/text-converter' },
-    { id: 'wordprocessor', label: 'Word Processor', icon: <Type className="h-4 w-4" />, path: '/text-converter' },
+    { id: 'notepad', label: 'Notepad', icon: <FileText className="h-4 w-4" />, path: '/text-tools/text-converter' },
+    { id: 'wordpad', label: 'WordPad', icon: <TextCursor className="h-4 w-4" />, path: '/text-tools/text-converter' },
+    { id: 'wordprocessor', label: 'Word Processor', icon: <Type className="h-4 w-4" />, path: '/text-tools/text-converter' },
   ]
 };
 
