@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Win98SearchBar from '../components/Win98SearchBar';
 import Win98Taskbar from '../components/Win98Taskbar';
 import Win98DesktopIcon from '../components/Win98DesktopIcon';
@@ -8,6 +9,7 @@ import { useToast } from "@/components/ui/use-toast";
 const Index = () => {
   const { toast } = useToast();
   const [searchResults, setSearchResults] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const handleSearch = (query: string) => {
     if (query.trim() === '') {
@@ -15,6 +17,15 @@ const Index = () => {
         title: "Search Error",
         description: "Please enter a search query",
       });
+      return;
+    }
+
+    // Check if query matches known applications
+    const lowerQuery = query.toLowerCase();
+    if (lowerQuery.includes('text') && 
+        (lowerQuery.includes('convert') || lowerQuery.includes('case') || 
+         lowerQuery.includes('notepad') || lowerQuery.includes('word'))) {
+      navigate('/text-converter');
       return;
     }
 
@@ -31,13 +42,18 @@ const Index = () => {
     { id: 'myfiles', label: 'My Files', icon: '📁' },
     { id: 'msdos', label: 'MS-DOS', icon: '📝' },
     { id: 'explorer', label: 'Internet Explorer', icon: '🌐' },
+    { id: 'texttools', label: 'Text Tools', icon: 'Aa' },
   ];
 
   const handleIconClick = (id: string) => {
-    toast({
-      title: "Icon Clicked",
-      description: `You clicked on: ${id}`,
-    });
+    if (id === 'texttools') {
+      navigate('/text-converter');
+    } else {
+      toast({
+        title: "Icon Clicked",
+        description: `You clicked on: ${id}`,
+      });
+    }
   };
 
   return (

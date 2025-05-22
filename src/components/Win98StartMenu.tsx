@@ -2,11 +2,13 @@
 import React, { useState } from 'react';
 import { Search, FileText, Type, TextCursor } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useNavigate } from 'react-router-dom';
 
 interface StartMenuItem {
   id: string;
   label: string;
   icon?: React.ReactNode;
+  path?: string;
 }
 
 interface StartMenuSection {
@@ -30,14 +32,23 @@ const menuItems: StartMenuItem[] = [
 const textTools: StartMenuSection = {
   title: "Text Processing Tools",
   items: [
-    { id: 'notepad', label: 'Notepad', icon: <FileText className="h-4 w-4" /> },
-    { id: 'wordpad', label: 'WordPad', icon: <TextCursor className="h-4 w-4" /> },
-    { id: 'wordprocessor', label: 'Word Processor', icon: <Type className="h-4 w-4" /> },
+    { id: 'notepad', label: 'Notepad', icon: <FileText className="h-4 w-4" />, path: '/text-converter' },
+    { id: 'wordpad', label: 'WordPad', icon: <TextCursor className="h-4 w-4" />, path: '/text-converter' },
+    { id: 'wordprocessor', label: 'Word Processor', icon: <Type className="h-4 w-4" />, path: '/text-converter' },
   ]
 };
 
 const Win98StartMenu: React.FC<Win98StartMenuProps> = ({ isOpen, onClose }) => {
+  const navigate = useNavigate();
+
   if (!isOpen) return null;
+
+  const handleItemClick = (item: StartMenuItem) => {
+    if (item.path) {
+      navigate(item.path);
+      onClose();
+    }
+  };
 
   return (
     <div className="win98-start-menu" onClick={(e) => e.stopPropagation()}>
@@ -52,7 +63,11 @@ const Win98StartMenu: React.FC<Win98StartMenuProps> = ({ isOpen, onClose }) => {
         <div className="mb-2">
           <div className="text-sm font-bold px-2 py-1">{textTools.title}</div>
           {textTools.items.map(item => (
-            <div key={item.id} className="win98-start-menu-item">
+            <div 
+              key={item.id} 
+              className="win98-start-menu-item"
+              onClick={() => handleItemClick(item)}
+            >
               {item.icon && <span className="mr-2">{item.icon}</span>}
               <span>{item.label}</span>
             </div>
@@ -64,7 +79,11 @@ const Win98StartMenu: React.FC<Win98StartMenuProps> = ({ isOpen, onClose }) => {
         
         {/* Regular Menu Items */}
         {menuItems.map(item => (
-          <div key={item.id} className="win98-start-menu-item">
+          <div 
+            key={item.id} 
+            className="win98-start-menu-item"
+            onClick={() => handleItemClick(item)}
+          >
             {item.icon && <span className="mr-2">{item.icon}</span>}
             <span>{item.label}</span>
           </div>
