@@ -19,6 +19,7 @@ const Win98DesktopIcon: React.FC<Win98DesktopIconProps> = ({
   onClick 
 }) => {
   const [isDragging, setIsDragging] = useState(false);
+  const [hasMovedDuringDrag, setHasMovedDuringDrag] = useState(false);
   const dragRef = useRef<{ 
     startX: number; 
     startY: number; 
@@ -31,12 +32,8 @@ const Win98DesktopIcon: React.FC<Win98DesktopIconProps> = ({
     e.preventDefault();
     e.stopPropagation();
     
-    if (onClick && !isDragging) {
-      // Allow click only if not dragging
-      onClick();
-      return;
-    }
-
+    setHasMovedDuringDrag(false);
+    
     setIsDragging(true);
     dragRef.current = {
       startX: e.clientX,
@@ -53,14 +50,23 @@ const Win98DesktopIcon: React.FC<Win98DesktopIconProps> = ({
     
     const handleGlobalMouseMove = (e: MouseEvent) => {
       if (isDragging) {
+        // Detect if the icon has moved during drag
+        const deltaX = Math.abs(e.clientX - dragRef.current.startX);
+        const deltaY = Math.abs(e.clientY - dragRef.current.startY);
+        
+        // Consider as moved if dragged more than 3 pixels in any direction
+        if (deltaX > 3 || deltaY > 3) {
+          setHasMovedDuringDrag(true);
+        }
+        
         // Disable text selection during dragging
         styleElement.innerHTML = '* { user-select: none !important; }';
         
-        const deltaX = e.clientX - dragRef.current.startX;
-        const deltaY = e.clientY - dragRef.current.startY;
+        const deltaX2 = e.clientX - dragRef.current.startX;
+        const deltaY2 = e.clientY - dragRef.current.startY;
         
-        const newX = dragRef.current.startPosX + deltaX;
-        const newY = dragRef.current.startPosY + deltaY;
+        const newX = dragRef.current.startPosX + deltaX2;
+        const newY = dragRef.current.startPosY + deltaY2;
         
         if (onPositionChange) {
           onPositionChange(id, { x: newX, y: newY });
@@ -68,8 +74,13 @@ const Win98DesktopIcon: React.FC<Win98DesktopIconProps> = ({
       }
     };
 
-    const handleGlobalMouseUp = () => {
+    const handleGlobalMouseUp = (e: MouseEvent) => {
       if (isDragging) {
+        if (!hasMovedDuringDrag && onClick) {
+          // Only trigger click if the icon wasn't dragged
+          onClick();
+        }
+        
         setIsDragging(false);
         // Re-enable text selection when dragging stops
         styleElement.innerHTML = '';
@@ -86,7 +97,7 @@ const Win98DesktopIcon: React.FC<Win98DesktopIconProps> = ({
       window.removeEventListener('mouseup', handleGlobalMouseUp);
       document.head.removeChild(styleElement);
     };
-  }, [isDragging, onPositionChange, id]);
+  }, [isDragging, onPositionChange, id, onClick, hasMovedDuringDrag]);
 
   return (
     <div 

@@ -1,5 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Win98Taskbar from '../components/Win98Taskbar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,6 +8,7 @@ import { FileDown, Copy, Trash2, CaseLower, CaseUpper } from 'lucide-react';
 
 const TextConverter = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [text, setText] = useState<string>('');
   const [convertedText, setConvertedText] = useState<string>('');
   const [stats, setStats] = useState({
@@ -16,6 +17,11 @@ const TextConverter = () => {
     sentences: 0,
     lines: 0
   });
+
+  // Handle navigation back to text tools page
+  const handleBackClick = () => {
+    navigate('/text-tools');
+  };
 
   // Update statistics when text changes
   useEffect(() => {
@@ -148,7 +154,12 @@ const TextConverter = () => {
             <div className="flex gap-1">
               <button className="bg-win98-gray text-win98-text w-5 h-5 flex items-center justify-center border border-win98-btnshadow leading-none">_</button>
               <button className="bg-win98-gray text-win98-text w-5 h-5 flex items-center justify-center border border-win98-btnshadow leading-none">□</button>
-              <button className="bg-win98-gray text-win98-text w-5 h-5 flex items-center justify-center border border-win98-btnshadow leading-none">×</button>
+              <button 
+                onClick={handleBackClick}
+                className="bg-win98-gray text-win98-text w-5 h-5 flex items-center justify-center border border-win98-btnshadow leading-none hover:bg-red-100"
+              >
+                ×
+              </button>
             </div>
           </div>
           <div className="p-4 bg-win98-btnface">

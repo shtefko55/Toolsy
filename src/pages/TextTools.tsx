@@ -73,7 +73,12 @@ const TextTools = () => {
             <div className="flex gap-1">
               <button className="bg-win98-gray text-win98-text w-5 h-5 flex items-center justify-center border border-win98-btnshadow leading-none">_</button>
               <button className="bg-win98-gray text-win98-text w-5 h-5 flex items-center justify-center border border-win98-btnshadow leading-none">□</button>
-              <button className="bg-win98-gray text-win98-text w-5 h-5 flex items-center justify-center border border-win98-btnshadow leading-none">×</button>
+              <button 
+                onClick={handleBackClick} 
+                className="bg-win98-gray text-win98-text w-5 h-5 flex items-center justify-center border border-win98-btnshadow leading-none hover:bg-red-100"
+              >
+                ×
+              </button>
             </div>
           </div>
           <div className="p-4 bg-white min-h-[400px] relative">
