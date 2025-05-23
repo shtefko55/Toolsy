@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Win98SearchBar from '../components/Win98SearchBar';
@@ -9,6 +10,19 @@ const Index = () => {
   const { toast } = useToast();
   const [searchResults, setSearchResults] = useState<string | null>(null);
   const navigate = useNavigate();
+  
+  // Desktop icons with their initial positions
+  const desktopIcons = [
+    { id: 'mycomputer', label: 'My Computer', icon: '🖥️' },
+    { id: 'recyclebin', label: 'Recycle Bin', icon: '🗑️' },
+    { id: 'texttools', label: 'Text Tools', icon: '📁' },
+    { id: 'msdos', label: 'MS-DOS', icon: '📝' },
+    { id: 'explorer', label: 'Internet Explorer', icon: '🌐' },
+    { id: 'texttoolsicon', label: 'Text Case Convert', icon: 'Aa' },
+  ];
+  
+  // State for icon positions
+  const [iconPositions, setIconPositions] = useState<Record<string, { x: number, y: number }>>({});
   
   // Initialize position to the center of the viewport
   const [searchBarPosition, setSearchBarPosition] = useState(() => {
@@ -24,6 +38,22 @@ const Index = () => {
       };
     }
   });
+  
+  // Load saved icon positions from localStorage
+  useEffect(() => {
+    const savedPositions = localStorage.getItem('desktopIconPositions');
+    if (savedPositions) {
+      setIconPositions(JSON.parse(savedPositions));
+    } else {
+      // Initialize default positions in a vertical column
+      const defaultPositions: Record<string, { x: number, y: number }> = {};
+      desktopIcons.forEach((icon, index) => {
+        defaultPositions[icon.id] = { x: 20, y: 20 + (index * 100) };
+      });
+      setIconPositions(defaultPositions);
+      localStorage.setItem('desktopIconPositions', JSON.stringify(defaultPositions));
+    }
+  }, []);
   
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number }>({ startX: 0, startY: 0, startPosX: 0, startPosY: 0 });
@@ -72,15 +102,6 @@ const Index = () => {
     setSearchResults(query);
   };
 
-  const desktopIcons = [
-    { id: 'mycomputer', label: 'My Computer', icon: '🖥️' },
-    { id: 'recyclebin', label: 'Recycle Bin', icon: '🗑️' },
-    { id: 'texttools', label: 'Text Tools', icon: '📁' },
-    { id: 'msdos', label: 'MS-DOS', icon: '📝' },
-    { id: 'explorer', label: 'Internet Explorer', icon: '🌐' },
-    { id: 'texttoolsicon', label: 'Text Case Convert', icon: 'Aa' },
-  ];
-
   const handleIconClick = (id: string) => {
     if (id === 'texttoolsicon') {
       navigate('/text-tools/text-converter');
@@ -92,6 +113,13 @@ const Index = () => {
         description: `You clicked on: ${id}`,
       });
     }
+  };
+  
+  // Handle icon position change
+  const handleIconPositionChange = (id: string, position: { x: number, y: number }) => {
+    const newPositions = { ...iconPositions, [id]: position };
+    setIconPositions(newPositions);
+    localStorage.setItem('desktopIconPositions', JSON.stringify(newPositions));
   };
 
   // When position changes, save to localStorage
@@ -170,18 +198,19 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-win98-desktop flex flex-col overflow-hidden">
       {/* Desktop */}
-      <div className="flex-grow p-4">
-        {/* Desktop Icons */}
-        <div className="grid grid-cols-1 gap-4 mb-8">
-          {desktopIcons.map((icon) => (
-            <Win98DesktopIcon
-              key={icon.id}
-              icon={<span className="text-2xl">{icon.icon}</span>}
-              label={icon.label}
-              onClick={() => handleIconClick(icon.id)}
-            />
-          ))}
-        </div>
+      <div className="flex-grow p-4 relative">
+        {/* Desktop Icons - now absolutely positioned */}
+        {desktopIcons.map((icon) => (
+          <Win98DesktopIcon
+            key={icon.id}
+            id={icon.id}
+            icon={<span className="text-2xl">{icon.icon}</span>}
+            label={icon.label}
+            position={iconPositions[icon.id]}
+            onPositionChange={handleIconPositionChange}
+            onClick={() => handleIconClick(icon.id)}
+          />
+        ))}
 
         {/* Draggable Search Bar */}
         <div 
