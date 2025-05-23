@@ -10,7 +10,13 @@ const Index = () => {
   const { toast } = useToast();
   const [searchResults, setSearchResults] = useState<string | null>(null);
   const navigate = useNavigate();
-  const [searchBarPosition, setSearchBarPosition] = useState({ x: 0, y: 0 });
+  
+  // Initialize position from localStorage or default to middle position
+  const [searchBarPosition, setSearchBarPosition] = useState(() => {
+    const savedPosition = localStorage.getItem('searchBarPosition');
+    return savedPosition ? JSON.parse(savedPosition) : { x: 0, y: 0 };
+  });
+  
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number }>({ startX: 0, startY: 0, startPosX: 0, startPosY: 0 });
 
@@ -59,7 +65,16 @@ const Index = () => {
     }
   };
 
+  // When position changes, save to localStorage
+  useEffect(() => {
+    if (searchBarPosition.x !== 0 || searchBarPosition.y !== 0) {
+      localStorage.setItem('searchBarPosition', JSON.stringify(searchBarPosition));
+    }
+  }, [searchBarPosition]);
+
   const handleMouseDown = (e: React.MouseEvent) => {
+    // Prevent default to stop text selection
+    e.preventDefault();
     setIsDragging(true);
     dragRef.current = {
       startX: e.clientX,
@@ -86,14 +101,23 @@ const Index = () => {
   };
 
   useEffect(() => {
+    // Create a style element to disable text selection while dragging
+    const styleElement = document.createElement('style');
+    document.head.appendChild(styleElement);
+    
     const handleGlobalMouseUp = () => {
       if (isDragging) {
         setIsDragging(false);
+        // Re-enable text selection when dragging stops
+        styleElement.innerHTML = '';
       }
     };
 
     const handleGlobalMouseMove = (e: MouseEvent) => {
       if (isDragging) {
+        // Disable text selection during dragging
+        styleElement.innerHTML = '* { user-select: none !important; }';
+        
         const deltaX = e.clientX - dragRef.current.startX;
         const deltaY = e.clientY - dragRef.current.startY;
         
@@ -112,6 +136,7 @@ const Index = () => {
       // Remove global event listeners on cleanup
       window.removeEventListener('mousemove', handleGlobalMouseMove);
       window.removeEventListener('mouseup', handleGlobalMouseUp);
+      document.head.removeChild(styleElement);
     };
   }, [isDragging]);
 
