@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Search, FileText, Type, TextCursor } from 'lucide-react';
+import { Search, FileText, Type, TextCursor, FileCode, Hash, Eye } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useNavigate } from 'react-router-dom';
 
@@ -32,9 +32,12 @@ const menuItems: StartMenuItem[] = [
 const textTools: StartMenuSection = {
   title: "Text Processing Tools",
   items: [
-    { id: 'notepad', label: 'Notepad', icon: <FileText className="h-4 w-4" />, path: '/text-tools/text-converter' },
-    { id: 'wordpad', label: 'WordPad', icon: <TextCursor className="h-4 w-4" />, path: '/text-tools/text-converter' },
-    { id: 'wordprocessor', label: 'Word Processor', icon: <Type className="h-4 w-4" />, path: '/text-tools/text-converter' },
+    { id: 'text-converter', label: 'Text Case Converter', icon: <TextCursor className="h-4 w-4" />, path: '/text-tools/text-converter' },
+    { id: 'text-editor', label: 'Text Editor', icon: <FileText className="h-4 w-4" />, path: '/text-tools/text-editor' },
+    { id: 'word-combiner', label: 'Word Combiner', icon: <Type className="h-4 w-4" />, path: '/text-tools/word-combiner' },
+    { id: 'md5-generator', label: 'MD5 Generator', icon: <Hash className="h-4 w-4" />, path: '/text-tools/md5-generator' },
+    { id: 'invisible-char-generator', label: 'Invisible Character Generator', icon: <Eye className="h-4 w-4" />, path: '/text-tools/invisible-char-generator' },
+    { id: 'text-tools-folder', label: 'Text Tools Folder', icon: <FileCode className="h-4 w-4" />, path: '/text-tools' },
   ]
 };
 

@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Win98SearchBar from '../components/Win98SearchBar';
@@ -83,8 +82,10 @@ const Index = () => {
   ];
 
   const handleIconClick = (id: string) => {
-    if (id === 'texttoolsicon' || id === 'texttools') {
+    if (id === 'texttoolsicon') {
       navigate('/text-tools/text-converter');
+    } else if (id === 'texttools') {
+      navigate('/text-tools');
     } else {
       toast({
         title: "Icon Clicked",
