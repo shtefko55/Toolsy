@@ -11,14 +11,42 @@ const Index = () => {
   const [searchResults, setSearchResults] = useState<string | null>(null);
   const navigate = useNavigate();
   
-  // Initialize position from localStorage or default to middle position
+  // Initialize position to the center of the viewport
   const [searchBarPosition, setSearchBarPosition] = useState(() => {
     const savedPosition = localStorage.getItem('searchBarPosition');
-    return savedPosition ? JSON.parse(savedPosition) : { x: 0, y: 0 };
+    
+    if (savedPosition) {
+      return JSON.parse(savedPosition);
+    } else {
+      // Default to center of viewport
+      return { 
+        x: (window.innerWidth / 2) - 150, // Approximate half width of search bar
+        y: (window.innerHeight / 2) - 100  // Approximate half height of search bar
+      };
+    }
   });
   
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number }>({ startX: 0, startY: 0, startPosX: 0, startPosY: 0 });
+
+  // Update the center position on window resize
+  useEffect(() => {
+    const handleResize = () => {
+      // Only update if no saved position exists
+      if (!localStorage.getItem('searchBarPosition')) {
+        setSearchBarPosition({
+          x: (window.innerWidth / 2) - 150,
+          y: (window.innerHeight / 2) - 100
+        });
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   const handleSearch = (query: string) => {
     if (query.trim() === '') {
@@ -67,9 +95,7 @@ const Index = () => {
 
   // When position changes, save to localStorage
   useEffect(() => {
-    if (searchBarPosition.x !== 0 || searchBarPosition.y !== 0) {
-      localStorage.setItem('searchBarPosition', JSON.stringify(searchBarPosition));
-    }
+    localStorage.setItem('searchBarPosition', JSON.stringify(searchBarPosition));
   }, [searchBarPosition]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
