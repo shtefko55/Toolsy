@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from "@/components/ui/use-toast";
 import Win98Taskbar from '../../components/Win98Taskbar';
 import { Upload, FileText, Download, Trash2 } from 'lucide-react';
+import { PDFDocument } from 'pdf-lib';
 
 const JpgToPDF = () => {
   const navigate = useNavigate();
@@ -45,20 +46,63 @@ const JpgToPDF = () => {
     setIsProcessing(true);
     
     try {
-      // Simulate JPG to PDF conversion
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log('Starting PDF conversion for files:', selectedFiles.map(f => f.name));
+      
+      // Create a new PDF document
+      const pdfDoc = await PDFDocument.create();
+      
+      for (const file of selectedFiles) {
+        console.log('Processing file:', file.name);
+        
+        // Convert file to array buffer
+        const arrayBuffer = await file.arrayBuffer();
+        
+        let image;
+        if (file.type === 'image/jpeg' || file.type === 'image/jpg') {
+          image = await pdfDoc.embedJpg(arrayBuffer);
+        } else if (file.type === 'image/png') {
+          image = await pdfDoc.embedPng(arrayBuffer);
+        } else {
+          console.log('Unsupported image type:', file.type);
+          continue;
+        }
+        
+        // Add a page with the image
+        const page = pdfDoc.addPage([image.width, image.height]);
+        page.drawImage(image, {
+          x: 0,
+          y: 0,
+          width: image.width,
+          height: image.height,
+        });
+      }
+      
+      // Serialize the PDF document to bytes
+      const pdfBytes = await pdfDoc.save();
+      
+      // Create download link
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'converted-images.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
       
       toast({
         title: "Success!",
         description: `Successfully converted ${selectedFiles.length} image(s) to PDF`,
       });
       
-      console.log('Converting images to PDF:', selectedFiles.map(f => f.name));
+      console.log('PDF conversion completed successfully');
       
     } catch (error) {
+      console.error('Error converting images to PDF:', error);
       toast({
         title: "Error",
-        description: "Failed to convert images to PDF",
+        description: "Failed to convert images to PDF. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -110,12 +154,12 @@ const JpgToPDF = () => {
                     <input
                       type="file"
                       multiple
-                      accept="image/*"
+                      accept="image/jpeg,image/jpg,image/png"
                       onChange={handleFileSelect}
                       className="hidden"
                     />
                   </label>
-                  <p className="text-gray-500 mt-2">Supports JPG, PNG, GIF and other image formats</p>
+                  <p className="text-gray-500 mt-2">Supports JPG and PNG formats</p>
                 </div>
 
                 {selectedFiles.length > 0 && (
