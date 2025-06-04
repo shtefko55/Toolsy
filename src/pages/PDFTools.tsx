@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Win98Taskbar from '../components/Win98Taskbar';
@@ -62,8 +61,8 @@ const PDFTools = () => {
   };
 
   const handleIconClick = (id: string) => {
-    // Check if tool has a route, otherwise show coming soon message
-    const toolsWithRoutes = ['merge-pdf', 'split-pdf', 'word-to-pdf'];
+    // Update to include more working tools
+    const toolsWithRoutes = ['merge-pdf', 'split-pdf', 'word-to-pdf', 'jpg-to-pdf', 'rotate-pdf'];
     
     if (toolsWithRoutes.includes(id)) {
       navigate(`/pdf-tools/${id}`);

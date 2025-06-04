@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 
 interface Win98DesktopIconProps {
@@ -113,16 +112,24 @@ const Win98DesktopIcon: React.FC<Win98DesktopIconProps> = ({
   return (
     <div 
       data-icon-id={id}
-      className={`win98-desktop-icon absolute cursor-move ${isDragging ? 'z-10' : ''} ${isSelected ? 'bg-win98-highlight' : ''}`}
+      className={`win98-desktop-icon absolute cursor-move ${isDragging ? 'z-10' : ''}`}
       style={{ 
         left: `${position?.x || 20}px`, 
         top: `${position?.y || 20}px` 
       }}
       onMouseDown={handleMouseDown}
     >
-      <div>{icon}</div>
-      <div className={`text-xs text-center font-ms-sans px-1 py-0.5 ${isSelected ? 'text-white bg-win98-highlight' : 'text-black bg-white bg-opacity-75'} rounded`}>
-        {label}
+      <div className={`${isSelected ? 'bg-win98-highlight' : ''} p-1 rounded`}>
+        <div className="flex flex-col items-center">
+          <div>{icon}</div>
+          <div className={`text-xs text-center font-ms-sans px-1 py-0.5 max-w-16 break-words ${
+            isSelected 
+              ? 'text-white bg-win98-highlight' 
+              : 'text-white drop-shadow-[1px_1px_1px_rgba(0,0,0,0.8)]'
+          } rounded`}>
+            {label}
+          </div>
+        </div>
       </div>
     </div>
   );

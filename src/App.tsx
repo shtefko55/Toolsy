@@ -15,6 +15,8 @@ import InvisibleCharGenerator from "./pages/text-tools/InvisibleCharGenerator";
 import MergePDF from "./pages/pdf-tools/MergePDF";
 import SplitPDF from "./pages/pdf-tools/SplitPDF";
 import WordToPDF from "./pages/pdf-tools/WordToPDF";
+import JpgToPDF from "./pages/pdf-tools/JpgToPDF";
+import RotatePDF from "./pages/pdf-tools/RotatePDF";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +39,8 @@ const App = () => (
           <Route path="/pdf-tools/merge-pdf" element={<MergePDF />} />
           <Route path="/pdf-tools/split-pdf" element={<SplitPDF />} />
           <Route path="/pdf-tools/word-to-pdf" element={<WordToPDF />} />
+          <Route path="/pdf-tools/jpg-to-pdf" element={<JpgToPDF />} />
+          <Route path="/pdf-tools/rotate-pdf" element={<RotatePDF />} />
           {/* Redirect old path to new one */}
           <Route path="/text-converter" element={<Navigate to="/text-tools/text-converter" />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
