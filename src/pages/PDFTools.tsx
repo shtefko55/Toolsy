@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Win98Taskbar from '../components/Win98Taskbar';
@@ -38,14 +39,14 @@ const PDFTools = () => {
     if (savedPositions) {
       setIconPositions(JSON.parse(savedPositions));
     } else {
-      // Initialize default positions in a grid layout
+      // Initialize default positions in a grid layout with better spacing
       const defaultPositions: Record<string, { x: number, y: number }> = {};
       pdfTools.forEach((tool, index) => {
-        const row = Math.floor(index / 4);
-        const col = index % 4;
+        const row = Math.floor(index / 5); // 5 icons per row for better layout
+        const col = index % 5;
         defaultPositions[tool.id] = { 
-          x: 20 + (col * 120), 
-          y: 20 + (row * 100) 
+          x: 30 + (col * 110), // Better horizontal spacing
+          y: 30 + (row * 90)   // Better vertical spacing
         };
       });
       setIconPositions(defaultPositions);
@@ -103,7 +104,7 @@ const PDFTools = () => {
   const renderListView = () => (
     <div className="p-4">
       <div className="bg-white border border-gray-300 rounded">
-        <div className="bg-gray-100 border-b border-gray-300 p-2 font-bold text-sm">
+        <div className="bg-gray-100 border-b border-gray-300 p-2 font-bold text-sm text-black">
           <div className="flex">
             <div className="flex-1">Name</div>
             <div className="w-20">Type</div>
@@ -116,7 +117,7 @@ const PDFTools = () => {
             onClick={() => handleIconClick(tool.id)}
           >
             <span className="mr-3 text-lg">{tool.icon}</span>
-            <div className="flex-1 text-black text-sm">{tool.label}</div>
+            <div className="flex-1 text-black text-sm font-medium">{tool.label}</div>
             <div className="w-20 text-gray-600 text-xs">PDF Tool</div>
           </div>
         ))}

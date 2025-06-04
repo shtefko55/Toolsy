@@ -125,7 +125,7 @@ const Win98DesktopIcon: React.FC<Win98DesktopIconProps> = ({
           <div className={`text-xs text-center font-ms-sans px-1 py-0.5 max-w-16 break-words ${
             isSelected 
               ? 'text-white bg-win98-highlight' 
-              : 'text-white drop-shadow-[1px_1px_1px_rgba(0,0,0,0.8)]'
+              : 'text-black font-medium'
           } rounded`}>
             {label}
           </div>
