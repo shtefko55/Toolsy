@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Win98SearchBar from '../components/Win98SearchBar';
@@ -16,6 +15,7 @@ const Index = () => {
     { id: 'mycomputer', label: 'My Computer', icon: '🖥️' },
     { id: 'recyclebin', label: 'Recycle Bin', icon: '🗑️' },
     { id: 'texttools', label: 'Text Tools', icon: '📁' },
+    { id: 'pdftools', label: 'PDF <3', icon: '📄' },
     { id: 'msdos', label: 'MS-DOS', icon: '📝' },
     { id: 'explorer', label: 'Internet Explorer', icon: '🌐' },
     { id: 'texttoolsicon', label: 'Text Case Convert', icon: 'Aa' },
@@ -107,6 +107,8 @@ const Index = () => {
       navigate('/text-tools/text-converter');
     } else if (id === 'texttools') {
       navigate('/text-tools');
+    } else if (id === 'pdftools') {
+      navigate('/pdf-tools');
     } else {
       toast({
         title: "Icon Clicked",

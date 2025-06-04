@@ -7,10 +7,14 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import TextConverter from "./pages/TextConverter";
 import TextTools from "./pages/TextTools";
+import PDFTools from "./pages/PDFTools";
 import TextEditor from "./pages/text-tools/TextEditor";
 import WordCombiner from "./pages/text-tools/WordCombiner";
 import MD5Generator from "./pages/text-tools/MD5Generator";
 import InvisibleCharGenerator from "./pages/text-tools/InvisibleCharGenerator";
+import MergePDF from "./pages/pdf-tools/MergePDF";
+import SplitPDF from "./pages/pdf-tools/SplitPDF";
+import WordToPDF from "./pages/pdf-tools/WordToPDF";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +33,10 @@ const App = () => (
           <Route path="/text-tools/word-combiner" element={<WordCombiner />} />
           <Route path="/text-tools/md5-generator" element={<MD5Generator />} />
           <Route path="/text-tools/invisible-char-generator" element={<InvisibleCharGenerator />} />
+          <Route path="/pdf-tools" element={<PDFTools />} />
+          <Route path="/pdf-tools/merge-pdf" element={<MergePDF />} />
+          <Route path="/pdf-tools/split-pdf" element={<SplitPDF />} />
+          <Route path="/pdf-tools/word-to-pdf" element={<WordToPDF />} />
           {/* Redirect old path to new one */}
           <Route path="/text-converter" element={<Navigate to="/text-tools/text-converter" />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

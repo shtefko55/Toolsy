@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Search, FileText, Type, TextCursor, FileCode, Hash, Eye } from 'lucide-react';
+import { Search, FileText, Type, TextCursor, FileCode, Hash, Eye, File, Scissors } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useNavigate } from 'react-router-dom';
 
@@ -41,6 +41,16 @@ const textTools: StartMenuSection = {
   ]
 };
 
+const pdfTools: StartMenuSection = {
+  title: "PDF Tools",
+  items: [
+    { id: 'merge-pdf', label: 'Merge PDF', icon: <File className="h-4 w-4" />, path: '/pdf-tools/merge-pdf' },
+    { id: 'split-pdf', label: 'Split PDF', icon: <Scissors className="h-4 w-4" />, path: '/pdf-tools/split-pdf' },
+    { id: 'word-to-pdf', label: 'Word to PDF', icon: <FileText className="h-4 w-4" />, path: '/pdf-tools/word-to-pdf' },
+    { id: 'pdf-tools-folder', label: 'PDF Tools Folder', icon: <FileCode className="h-4 w-4" />, path: '/pdf-tools' },
+  ]
+};
+
 const Win98StartMenu: React.FC<Win98StartMenuProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
 
@@ -66,6 +76,21 @@ const Win98StartMenu: React.FC<Win98StartMenuProps> = ({ isOpen, onClose }) => {
         <div className="mb-2">
           <div className="text-sm font-bold px-2 py-1">{textTools.title}</div>
           {textTools.items.map(item => (
+            <div 
+              key={item.id} 
+              className="win98-start-menu-item"
+              onClick={() => handleItemClick(item)}
+            >
+              {item.icon && <span className="mr-2">{item.icon}</span>}
+              <span>{item.label}</span>
+            </div>
+          ))}
+        </div>
+        
+        {/* PDF Tools Section */}
+        <div className="mb-2">
+          <div className="text-sm font-bold px-2 py-1">{pdfTools.title}</div>
+          {pdfTools.items.map(item => (
             <div 
               key={item.id} 
               className="win98-start-menu-item"
