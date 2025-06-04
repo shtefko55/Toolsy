@@ -20,6 +20,7 @@ const Win98DesktopIcon: React.FC<Win98DesktopIconProps> = ({
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [hasMovedDuringDrag, setHasMovedDuringDrag] = useState(false);
+  const [isSelected, setIsSelected] = useState(false);
   const dragRef = useRef<{ 
     startX: number; 
     startY: number; 
@@ -33,6 +34,7 @@ const Win98DesktopIcon: React.FC<Win98DesktopIconProps> = ({
     e.stopPropagation();
     
     setHasMovedDuringDrag(false);
+    setIsSelected(true);
     
     setIsDragging(true);
     dragRef.current = {
@@ -87,21 +89,31 @@ const Win98DesktopIcon: React.FC<Win98DesktopIconProps> = ({
       }
     };
 
+    const handleGlobalClick = (e: MouseEvent) => {
+      const target = e.target as Element;
+      if (!target.closest(`[data-icon-id="${id}"]`)) {
+        setIsSelected(false);
+      }
+    };
+
     // Add global event listeners
     window.addEventListener('mousemove', handleGlobalMouseMove);
     window.addEventListener('mouseup', handleGlobalMouseUp);
+    window.addEventListener('click', handleGlobalClick);
 
     return () => {
       // Remove global event listeners on cleanup
       window.removeEventListener('mousemove', handleGlobalMouseMove);
       window.removeEventListener('mouseup', handleGlobalMouseUp);
+      window.removeEventListener('click', handleGlobalClick);
       document.head.removeChild(styleElement);
     };
   }, [isDragging, onPositionChange, id, onClick, hasMovedDuringDrag]);
 
   return (
     <div 
-      className={`win98-desktop-icon absolute cursor-move ${isDragging ? 'z-10' : ''}`}
+      data-icon-id={id}
+      className={`win98-desktop-icon absolute cursor-move ${isDragging ? 'z-10' : ''} ${isSelected ? 'bg-win98-highlight' : ''}`}
       style={{ 
         left: `${position?.x || 20}px`, 
         top: `${position?.y || 20}px` 
@@ -109,7 +121,9 @@ const Win98DesktopIcon: React.FC<Win98DesktopIconProps> = ({
       onMouseDown={handleMouseDown}
     >
       <div>{icon}</div>
-      <div className="text-white text-xs text-center font-ms-sans">{label}</div>
+      <div className={`text-xs text-center font-ms-sans px-1 py-0.5 ${isSelected ? 'text-white bg-win98-highlight' : 'text-black bg-white bg-opacity-75'} rounded`}>
+        {label}
+      </div>
     </div>
   );
 };

@@ -4,12 +4,14 @@ import { useNavigate } from 'react-router-dom';
 import Win98Taskbar from '../components/Win98Taskbar';
 import Win98DesktopIcon from '../components/Win98DesktopIcon';
 import { useToast } from "@/components/ui/use-toast";
+import { Grid, List } from 'lucide-react';
 
 const PDFTools = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   
   const [iconPositions, setIconPositions] = useState<Record<string, { x: number, y: number }>>({});
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   
   // Define PDF tools
   const pdfTools = [
@@ -31,6 +33,9 @@ const PDFTools = () => {
   // Load saved positions from localStorage on component mount
   useEffect(() => {
     const savedPositions = localStorage.getItem('pdfToolsIconPositions');
+    const savedViewMode = localStorage.getItem('pdfToolsViewMode') as 'grid' | 'list' || 'grid';
+    setViewMode(savedViewMode);
+    
     if (savedPositions) {
       setIconPositions(JSON.parse(savedPositions));
     } else {
@@ -57,12 +62,68 @@ const PDFTools = () => {
   };
 
   const handleIconClick = (id: string) => {
-    navigate(`/pdf-tools/${id}`);
+    // Check if tool has a route, otherwise show coming soon message
+    const toolsWithRoutes = ['merge-pdf', 'split-pdf', 'word-to-pdf'];
+    
+    if (toolsWithRoutes.includes(id)) {
+      navigate(`/pdf-tools/${id}`);
+    } else {
+      toast({
+        title: "Coming Soon!",
+        description: `${pdfTools.find(tool => tool.id === id)?.label} tool is coming soon!`,
+      });
+    }
   };
 
   const handleBackClick = () => {
     navigate('/');
   };
+
+  const toggleViewMode = () => {
+    const newMode = viewMode === 'grid' ? 'list' : 'grid';
+    setViewMode(newMode);
+    localStorage.setItem('pdfToolsViewMode', newMode);
+  };
+
+  const renderGridView = () => (
+    <>
+      {pdfTools.map((tool) => (
+        <Win98DesktopIcon
+          key={tool.id}
+          id={tool.id}
+          icon={<span className="text-2xl">{tool.icon}</span>}
+          label={tool.label}
+          position={iconPositions[tool.id]}
+          onPositionChange={handlePositionChange}
+          onClick={() => handleIconClick(tool.id)}
+        />
+      ))}
+    </>
+  );
+
+  const renderListView = () => (
+    <div className="p-4">
+      <div className="bg-white border border-gray-300 rounded">
+        <div className="bg-gray-100 border-b border-gray-300 p-2 font-bold text-sm">
+          <div className="flex">
+            <div className="flex-1">Name</div>
+            <div className="w-20">Type</div>
+          </div>
+        </div>
+        {pdfTools.map((tool, index) => (
+          <div 
+            key={tool.id}
+            className={`flex items-center p-2 cursor-pointer hover:bg-blue-100 border-b border-gray-100 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+            onClick={() => handleIconClick(tool.id)}
+          >
+            <span className="mr-3 text-lg">{tool.icon}</span>
+            <div className="flex-1 text-black text-sm">{tool.label}</div>
+            <div className="w-20 text-gray-600 text-xs">PDF Tool</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-win98-desktop flex flex-col overflow-hidden">
@@ -89,18 +150,27 @@ const PDFTools = () => {
               </button>
             </div>
           </div>
-          <div className="p-4 bg-white min-h-[500px] relative">
-            {pdfTools.map((tool) => (
-              <Win98DesktopIcon
-                key={tool.id}
-                id={tool.id}
-                icon={<span className="text-2xl">{tool.icon}</span>}
-                label={tool.label}
-                position={iconPositions[tool.id]}
-                onPositionChange={handlePositionChange}
-                onClick={() => handleIconClick(tool.id)}
-              />
-            ))}
+          
+          {/* Toolbar */}
+          <div className="bg-win98-gray border-b border-win98-btnshadow p-2 flex items-center gap-2">
+            <button 
+              className={`win98-btn px-2 py-1 flex items-center gap-1 ${viewMode === 'grid' ? 'shadow-win98-in' : ''}`}
+              onClick={toggleViewMode}
+            >
+              <Grid className="h-3 w-3" />
+              Grid
+            </button>
+            <button 
+              className={`win98-btn px-2 py-1 flex items-center gap-1 ${viewMode === 'list' ? 'shadow-win98-in' : ''}`}
+              onClick={toggleViewMode}
+            >
+              <List className="h-3 w-3" />
+              List
+            </button>
+          </div>
+
+          <div className={`bg-white min-h-[500px] ${viewMode === 'grid' ? 'relative' : ''}`}>
+            {viewMode === 'grid' ? renderGridView() : renderListView()}
           </div>
         </div>
       </div>

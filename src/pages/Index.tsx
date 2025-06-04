@@ -15,7 +15,7 @@ const Index = () => {
     { id: 'mycomputer', label: 'My Computer', icon: '🖥️' },
     { id: 'recyclebin', label: 'Recycle Bin', icon: '🗑️' },
     { id: 'texttools', label: 'Text Tools', icon: '📁' },
-    { id: 'pdftools', label: 'PDF <3', icon: '📄' },
+    { id: 'pdftools', label: 'PDF <3', icon: '📁' },
     { id: 'msdos', label: 'MS-DOS', icon: '📝' },
     { id: 'explorer', label: 'Internet Explorer', icon: '🌐' },
     { id: 'texttoolsicon', label: 'Text Case Convert', icon: 'Aa' },
