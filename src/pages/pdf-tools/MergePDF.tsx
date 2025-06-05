@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -6,12 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from "@/components/ui/use-toast";
 import Win98Taskbar from '../../components/Win98Taskbar';
 import { Upload, FileText, Trash2, Download } from 'lucide-react';
+import { PDFProcessor } from '@/lib/pdfUtils';
 
 const MergePDF = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
@@ -43,27 +44,34 @@ const MergePDF = () => {
     }
 
     setIsProcessing(true);
+    setProgress(0);
     
     try {
-      // Simulate PDF merging process
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const mergedPdfBytes = await PDFProcessor.mergePDFs({
+        files: selectedFiles,
+        onProgress: setProgress
+      });
+      
+      PDFProcessor.downloadPDF(mergedPdfBytes, 'merged-document.pdf');
       
       toast({
         title: "Success!",
         description: `Successfully merged ${selectedFiles.length} PDF files`,
       });
       
-      // In a real implementation, you would use pdf-lib to merge PDFs
-      console.log('Merging PDFs:', selectedFiles.map(f => f.name));
+      // Clear files after successful merge
+      setSelectedFiles([]);
       
     } catch (error) {
+      console.error('Error merging PDFs:', error);
       toast({
         title: "Error",
-        description: "Failed to merge PDF files",
+        description: "Failed to merge PDF files. Please ensure all files are valid PDFs.",
         variant: "destructive"
       });
     } finally {
       setIsProcessing(false);
+      setProgress(0);
     }
   };
 
@@ -114,6 +122,7 @@ const MergePDF = () => {
                       accept=".pdf"
                       onChange={handleFileSelect}
                       className="hidden"
+                      disabled={isProcessing}
                     />
                   </label>
                   <p className="text-gray-500 mt-2">Select multiple PDF files to merge them into one</p>
@@ -135,11 +144,24 @@ const MergePDF = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => removeFile(index)}
+                          disabled={isProcessing}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {isProcessing && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">Merging PDFs... {Math.round(progress)}%</div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                        style={{ width: `${progress}%` }}
+                      ></div>
+                    </div>
                   </div>
                 )}
 
@@ -156,7 +178,7 @@ const MergePDF = () => {
                   <Button
                     variant="outline"
                     onClick={() => setSelectedFiles([])}
-                    disabled={selectedFiles.length === 0}
+                    disabled={selectedFiles.length === 0 || isProcessing}
                   >
                     Clear All
                   </Button>

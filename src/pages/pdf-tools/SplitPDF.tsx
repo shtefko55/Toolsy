@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -6,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from "@/components/ui/use-toast";
 import Win98Taskbar from '../../components/Win98Taskbar';
 import { Upload, FileText, Scissors, Download } from 'lucide-react';
+import { PDFProcessor } from '@/lib/pdfUtils';
 
 const SplitPDF = () => {
   const navigate = useNavigate();
@@ -13,6 +13,7 @@ const SplitPDF = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [pageRanges, setPageRanges] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -38,27 +39,38 @@ const SplitPDF = () => {
     }
 
     setIsProcessing(true);
+    setProgress(0);
     
     try {
-      // Simulate PDF splitting process
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const splitPdfs = await PDFProcessor.splitPDF({
+        file: selectedFile,
+        pageRanges: pageRanges,
+        onProgress: setProgress
+      });
+      
+      // Download all split files
+      const baseFilename = selectedFile.name.replace('.pdf', '');
+      PDFProcessor.downloadMultiplePDFs(splitPdfs, baseFilename);
       
       toast({
         title: "Success!",
-        description: `PDF split successfully based on your specifications`,
+        description: `PDF split into ${splitPdfs.length} files and downloaded`,
       });
       
-      // In a real implementation, you would use pdf-lib to split PDFs
-      console.log('Splitting PDF:', selectedFile.name, 'with ranges:', pageRanges);
+      // Clear form after successful split
+      setSelectedFile(null);
+      setPageRanges('');
       
     } catch (error) {
+      console.error('Error splitting PDF:', error);
       toast({
         title: "Error",
-        description: "Failed to split PDF file",
+        description: "Failed to split PDF file. Please ensure the file is a valid PDF and page ranges are correct.",
         variant: "destructive"
       });
     } finally {
       setIsProcessing(false);
+      setProgress(0);
     }
   };
 
@@ -108,6 +120,7 @@ const SplitPDF = () => {
                       accept=".pdf"
                       onChange={handleFileSelect}
                       className="hidden"
+                      disabled={isProcessing}
                     />
                   </label>
                   <p className="text-gray-500 mt-2">Select a PDF file to split into multiple documents</p>
@@ -136,12 +149,25 @@ const SplitPDF = () => {
                       onChange={(e) => setPageRanges(e.target.value)}
                       placeholder="e.g., 1-5, 10-15, 20"
                       className="w-full p-2 border border-gray-300 rounded"
+                      disabled={isProcessing}
                     />
                     <p className="text-sm text-gray-500 mt-1">
-                      Leave empty to split each page individually
+                      Leave empty to split each page individually. Use format: "1-5, 10-15, 20" for specific ranges.
                     </p>
                   </div>
                 </div>
+
+                {isProcessing && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">Splitting PDF... {Math.round(progress)}%</div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                        style={{ width: `${progress}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex gap-4">
                   <Button
@@ -159,7 +185,7 @@ const SplitPDF = () => {
                       setSelectedFile(null);
                       setPageRanges('');
                     }}
-                    disabled={!selectedFile}
+                    disabled={!selectedFile || isProcessing}
                   >
                     Clear
                   </Button>

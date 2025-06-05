@@ -91,6 +91,7 @@ const TextTools = () => {
                 position={iconPositions[tool.id]}
                 onPositionChange={handlePositionChange}
                 onClick={() => handleIconClick(tool.id)}
+                variant="window"
               />
             ))}
           </div>

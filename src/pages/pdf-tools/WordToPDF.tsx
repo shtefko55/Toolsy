@@ -1,11 +1,10 @@
-
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from "@/components/ui/use-toast";
 import Win98Taskbar from '../../components/Win98Taskbar';
-import { Upload, FileText, Download } from 'lucide-react';
+import { Upload, FileText, Download, AlertCircle, ExternalLink } from 'lucide-react';
 
 const WordToPDF = () => {
   const navigate = useNavigate();
@@ -39,26 +38,29 @@ const WordToPDF = () => {
     setIsProcessing(true);
     
     try {
-      // Simulate Word to PDF conversion
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Simulate processing time
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
       toast({
-        title: "Success!",
-        description: `Word document converted to PDF successfully`,
+        title: "Feature Not Available",
+        description: "Word to PDF conversion requires server-side processing. Please use alternative tools or online converters.",
+        variant: "destructive"
       });
-      
-      // In a real implementation, you would use a conversion service or library
-      console.log('Converting Word to PDF:', selectedFile.name);
       
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to convert Word document to PDF",
+        description: "Word to PDF conversion is not available in this demo",
         variant: "destructive"
       });
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const openAlternativeTools = () => {
+    // Open Google Docs or Microsoft Office online
+    window.open('https://docs.google.com/', '_blank');
   };
 
   const handleBack = () => {
@@ -96,6 +98,27 @@ const WordToPDF = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
+                {/* Information Alert */}
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm">
+                      <h4 className="font-medium text-yellow-800 mb-1">Feature Limitation</h4>
+                      <p className="text-yellow-700 mb-2">
+                        Word to PDF conversion requires specialized server-side processing that isn't available in this browser-based demo.
+                      </p>
+                      <p className="text-yellow-700">
+                        For Word to PDF conversion, we recommend using:
+                      </p>
+                      <ul className="mt-1 text-yellow-700 list-disc list-inside">
+                        <li>Microsoft Word's built-in "Export as PDF" feature</li>
+                        <li>Google Docs (upload Word file, then download as PDF)</li>
+                        <li>Online conversion services</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
                   <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                   <label className="cursor-pointer">
@@ -107,9 +130,10 @@ const WordToPDF = () => {
                       accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                       onChange={handleFileSelect}
                       className="hidden"
+                      disabled={isProcessing}
                     />
                   </label>
-                  <p className="text-gray-500 mt-2">Supports .doc and .docx files</p>
+                  <p className="text-gray-500 mt-2">Supports .doc and .docx files (demo purposes)</p>
                 </div>
 
                 {selectedFile && (
@@ -129,15 +153,24 @@ const WordToPDF = () => {
                     onClick={convertToPDF}
                     disabled={!selectedFile || isProcessing}
                     className="flex items-center gap-2"
+                    variant="outline"
                   >
                     <Download className="h-4 w-4" />
-                    {isProcessing ? 'Converting...' : 'Convert to PDF'}
+                    {isProcessing ? 'Processing...' : 'Try Convert (Demo)'}
+                  </Button>
+                  
+                  <Button
+                    onClick={openAlternativeTools}
+                    className="flex items-center gap-2"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Use Google Docs
                   </Button>
                   
                   <Button
                     variant="outline"
                     onClick={() => setSelectedFile(null)}
-                    disabled={!selectedFile}
+                    disabled={!selectedFile || isProcessing}
                   >
                     Clear
                   </Button>

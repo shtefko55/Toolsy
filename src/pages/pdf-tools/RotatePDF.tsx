@@ -1,18 +1,19 @@
-
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from "@/components/ui/use-toast";
 import Win98Taskbar from '../../components/Win98Taskbar';
-import { Upload, FileText, Download, RotateCw } from 'lucide-react';
+import { Upload, FileText, RotateCw, Download } from 'lucide-react';
+import { PDFProcessor } from '@/lib/pdfUtils';
 
 const RotatePDF = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [rotation, setRotation] = useState(90);
+  const [rotation, setRotation] = useState<number>(90);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -38,26 +39,36 @@ const RotatePDF = () => {
     }
 
     setIsProcessing(true);
+    setProgress(0);
     
     try {
-      // Simulate PDF rotation
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const rotatedPdfBytes = await PDFProcessor.rotatePDF({
+        file: selectedFile,
+        rotation: rotation,
+        onProgress: setProgress
+      });
+      
+      const filename = selectedFile.name.replace('.pdf', `_rotated_${rotation}deg.pdf`);
+      PDFProcessor.downloadPDF(rotatedPdfBytes, filename);
       
       toast({
         title: "Success!",
-        description: `PDF rotated ${rotation} degrees successfully`,
+        description: `PDF rotated ${rotation}° and downloaded`,
       });
       
-      console.log('Rotating PDF:', selectedFile.name, 'by', rotation, 'degrees');
+      // Clear form after successful rotation
+      setSelectedFile(null);
       
     } catch (error) {
+      console.error('Error rotating PDF:', error);
       toast({
         title: "Error",
-        description: "Failed to rotate PDF file",
+        description: "Failed to rotate PDF file. Please ensure the file is a valid PDF.",
         variant: "destructive"
       });
     } finally {
       setIsProcessing(false);
+      setProgress(0);
     }
   };
 
@@ -107,6 +118,7 @@ const RotatePDF = () => {
                       accept=".pdf"
                       onChange={handleFileSelect}
                       className="hidden"
+                      disabled={isProcessing}
                     />
                   </label>
                   <p className="text-gray-500 mt-2">Select a PDF file to rotate its pages</p>
@@ -129,17 +141,39 @@ const RotatePDF = () => {
                     <label className="block text-sm font-medium mb-2">
                       Rotation Angle
                     </label>
-                    <select
-                      value={rotation}
-                      onChange={(e) => setRotation(Number(e.target.value))}
-                      className="w-full p-2 border border-gray-300 rounded"
-                    >
-                      <option value={90}>90° Clockwise</option>
-                      <option value={180}>180°</option>
-                      <option value={270}>270° Clockwise (90° Counter-clockwise)</option>
-                    </select>
+                    <div className="flex gap-2">
+                      {[90, 180, 270].map((angle) => (
+                        <button
+                          key={angle}
+                          onClick={() => setRotation(angle)}
+                          disabled={isProcessing}
+                          className={`px-4 py-2 rounded border font-medium ${
+                            rotation === angle
+                              ? 'bg-blue-500 text-white border-blue-500'
+                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                          } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          {angle}°
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Select the rotation angle (clockwise)
+                    </p>
                   </div>
                 </div>
+
+                {isProcessing && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">Rotating PDF... {Math.round(progress)}%</div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                        style={{ width: `${progress}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex gap-4">
                   <Button
@@ -148,13 +182,13 @@ const RotatePDF = () => {
                     className="flex items-center gap-2"
                   >
                     <Download className="h-4 w-4" />
-                    {isProcessing ? 'Rotating...' : 'Rotate PDF'}
+                    {isProcessing ? 'Rotating...' : `Rotate ${rotation}°`}
                   </Button>
                   
                   <Button
                     variant="outline"
                     onClick={() => setSelectedFile(null)}
-                    disabled={!selectedFile}
+                    disabled={!selectedFile || isProcessing}
                   >
                     Clear
                   </Button>

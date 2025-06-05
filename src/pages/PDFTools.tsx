@@ -13,21 +13,61 @@ const PDFTools = () => {
   const [iconPositions, setIconPositions] = useState<Record<string, { x: number, y: number }>>({});
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   
-  // Define PDF tools
+  // Define PDF tools - Comprehensive suite
   const pdfTools = [
-    { id: 'merge-pdf', label: 'Merge PDF', icon: '🔗' },
-    { id: 'split-pdf', label: 'Split PDF', icon: '✂️' },
-    { id: 'word-to-pdf', label: 'Word to PDF', icon: '📝' },
-    { id: 'powerpoint-to-pdf', label: 'PowerPoint to PDF', icon: '📊' },
-    { id: 'excel-to-pdf', label: 'Excel to PDF', icon: '📈' },
-    { id: 'pdf-to-jpg', label: 'PDF to JPG', icon: '🖼️' },
-    { id: 'jpg-to-pdf', label: 'JPG to PDF', icon: '📷' },
-    { id: 'rotate-pdf', label: 'Rotate PDF', icon: '🔄' },
-    { id: 'compress-pdf', label: 'Compress PDF', icon: '🗜️' },
-    { id: 'edit-pdf', label: 'Edit PDF', icon: '✏️' },
-    { id: 'pdf-to-word', label: 'PDF to Word', icon: '📄' },
-    { id: 'pdf-to-powerpoint', label: 'PDF to PowerPoint', icon: '📑' },
-    { id: 'pdf-to-excel', label: 'PDF to Excel', icon: '📋' },
+    // Existing tools
+    { id: 'merge-pdf', label: 'Merge PDF', icon: '🔗', category: 'Basic' },
+    { id: 'split-pdf', label: 'Split PDF', icon: '✂️', category: 'Basic' },
+    { id: 'word-to-pdf', label: 'Word to PDF', icon: '📝', category: 'Conversion' },
+    { id: 'powerpoint-to-pdf', label: 'PowerPoint to PDF', icon: '📊', category: 'Conversion' },
+    { id: 'excel-to-pdf', label: 'Excel to PDF', icon: '📈', category: 'Conversion' },
+    { id: 'pdf-to-jpg', label: 'PDF to JPG', icon: '🖼️', category: 'Conversion' },
+    { id: 'jpg-to-pdf', label: 'JPG to PDF', icon: '📷', category: 'Conversion' },
+    { id: 'rotate-pdf', label: 'Rotate PDF', icon: '🔄', category: 'Basic' },
+    { id: 'compress-pdf', label: 'Compress PDF', icon: '🗜️', category: 'Optimization' },
+    { id: 'edit-pdf', label: 'Edit PDF', icon: '✏️', category: 'Enhancement' },
+    { id: 'pdf-to-word', label: 'PDF to Word', icon: '📄', category: 'Conversion' },
+    { id: 'pdf-to-powerpoint', label: 'PDF to PowerPoint', icon: '📑', category: 'Conversion' },
+    { id: 'pdf-to-excel', label: 'PDF to Excel', icon: '📋', category: 'Conversion' },
+
+    // 📄 PDF Creation Tools
+    { id: 'pdf-creation', label: 'PDF Creation', icon: '📄', category: 'Creation' },
+    { id: 'pdf-form-creation', label: 'PDF Form Creation', icon: '📝', category: 'Creation' },
+    { id: 'pdf-form-filling', label: 'PDF Form Filling', icon: '📋', category: 'Creation' },
+    { id: 'pdf-page-extraction', label: 'PDF Page Extraction', icon: '📑', category: 'Basic' },
+    { id: 'pdf-page-reordering', label: 'PDF Page Reordering', icon: '🔄', category: 'Basic' },
+
+    // 🔍 PDF Enhancement Tools
+    { id: 'pdf-bookmarks', label: 'PDF Bookmarks/Outline', icon: '🔖', category: 'Enhancement' },
+    { id: 'pdf-metadata-editor', label: 'PDF Metadata Editor', icon: '📋', category: 'Enhancement' },
+    { id: 'pdf-page-numbering', label: 'PDF Page Numbering', icon: '🔢', category: 'Enhancement' },
+    { id: 'pdf-header-footer', label: 'PDF Header/Footer', icon: '📄', category: 'Enhancement' },
+    { id: 'pdf-watermarking', label: 'PDF Watermarking', icon: '🔏', category: 'Enhancement' },
+
+    // 🔐 PDF Security Tools
+    { id: 'pdf-encryption', label: 'PDF Encryption/Decryption', icon: '🔐', category: 'Security' },
+    { id: 'pdf-digital-signature', label: 'PDF Digital Signature', icon: '✍️', category: 'Security' },
+    { id: 'pdf-redaction', label: 'PDF Redaction', icon: '🖤', category: 'Security' },
+
+    // 🧠 PDF Analysis Tools
+    { id: 'pdf-text-extraction', label: 'PDF Text Extraction', icon: '📝', category: 'Analysis' },
+    { id: 'pdf-structure-analysis', label: 'PDF Structure Analysis', icon: '🔍', category: 'Analysis' },
+    { id: 'pdf-comparison', label: 'PDF Comparison', icon: '⚖️', category: 'Analysis' },
+
+    // 📦 PDF Optimization Tools
+    { id: 'pdf-linearization', label: 'PDF Linearization', icon: '⚡', category: 'Optimization' },
+    { id: 'pdf-font-subsetting', label: 'PDF Font Subsetting', icon: '🔤', category: 'Optimization' },
+    { id: 'pdf-image-optimization', label: 'PDF Image Optimization', icon: '🖼️', category: 'Optimization' },
+
+    // 🔁 PDF Conversion Tools
+    { id: 'pdf-to-html', label: 'PDF to HTML', icon: '🌐', category: 'Conversion' },
+    { id: 'pdf-to-text', label: 'PDF to Plain Text', icon: '📃', category: 'Conversion' },
+    { id: 'pdf-to-xml', label: 'PDF to XML', icon: '📄', category: 'Conversion' },
+    { id: 'svg-to-pdf', label: 'SVG to PDF', icon: '🎨', category: 'Conversion' },
+
+    // ⚙️ PDF Batch Processing Tools
+    { id: 'pdf-batch-processing', label: 'PDF Batch Processing', icon: '⚙️', category: 'Batch' },
+    { id: 'pdf-directory-monitoring', label: 'PDF Directory Monitoring', icon: '👁️', category: 'Batch' },
   ];
   
   // Load saved positions from localStorage on component mount
@@ -42,11 +82,11 @@ const PDFTools = () => {
       // Initialize default positions in a grid layout with better spacing
       const defaultPositions: Record<string, { x: number, y: number }> = {};
       pdfTools.forEach((tool, index) => {
-        const row = Math.floor(index / 5); // 5 icons per row for better layout
-        const col = index % 5;
+        const row = Math.floor(index / 6); // 6 icons per row for more tools
+        const col = index % 6;
         defaultPositions[tool.id] = { 
-          x: 30 + (col * 110), // Better horizontal spacing
-          y: 30 + (row * 90)   // Better vertical spacing
+          x: 20 + (col * 100), // Adjusted spacing for more tools
+          y: 20 + (row * 85)   // Adjusted spacing for more tools
         };
       });
       setIconPositions(defaultPositions);
@@ -62,8 +102,12 @@ const PDFTools = () => {
   };
 
   const handleIconClick = (id: string) => {
-    // Update to include more working tools
-    const toolsWithRoutes = ['merge-pdf', 'split-pdf', 'word-to-pdf', 'jpg-to-pdf', 'rotate-pdf'];
+    // Update to include more working tools and new comprehensive tools
+    const toolsWithRoutes = [
+      'merge-pdf', 'split-pdf', 'word-to-pdf', 'jpg-to-pdf', 'pdf-to-jpg', 'rotate-pdf',
+      'pdf-creation', 'pdf-text-extraction', 'pdf-metadata-editor', 'pdf-page-extraction', 
+      'pdf-watermarking', 'pdf-encryption', 'pdf-to-text', 'pdf-page-reordering'
+    ];
     
     if (toolsWithRoutes.includes(id)) {
       navigate(`/pdf-tools/${id}`);
@@ -96,34 +140,46 @@ const PDFTools = () => {
           position={iconPositions[tool.id]}
           onPositionChange={handlePositionChange}
           onClick={() => handleIconClick(tool.id)}
+          variant="window"
         />
       ))}
     </>
   );
 
-  const renderListView = () => (
-    <div className="p-4">
-      <div className="bg-white border border-gray-300 rounded">
-        <div className="bg-gray-100 border-b border-gray-300 p-2 font-bold text-sm text-black">
-          <div className="flex">
-            <div className="flex-1">Name</div>
-            <div className="w-20">Type</div>
-          </div>
-        </div>
-        {pdfTools.map((tool, index) => (
-          <div 
-            key={tool.id}
-            className={`flex items-center p-2 cursor-pointer hover:bg-blue-100 border-b border-gray-100 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
-            onClick={() => handleIconClick(tool.id)}
-          >
-            <span className="mr-3 text-lg">{tool.icon}</span>
-            <div className="flex-1 text-black text-sm font-medium">{tool.label}</div>
-            <div className="w-20 text-gray-600 text-xs">PDF Tool</div>
+  const renderListView = () => {
+    const groupedTools = pdfTools.reduce((acc, tool) => {
+      if (!acc[tool.category]) {
+        acc[tool.category] = [];
+      }
+      acc[tool.category].push(tool);
+      return acc;
+    }, {} as Record<string, typeof pdfTools>);
+
+    return (
+      <div className="p-4 max-h-[500px] overflow-y-auto">
+        {Object.entries(groupedTools).map(([category, tools]) => (
+          <div key={category} className="mb-4">
+            <div className="bg-gray-200 border border-gray-300 p-2 font-bold text-sm text-black rounded-t">
+              📁 {category} Tools ({tools.length})
+            </div>
+            <div className="bg-white border border-gray-300 rounded-b">
+              {tools.map((tool, index) => (
+                <div 
+                  key={tool.id}
+                  className={`flex items-center p-2 cursor-pointer hover:bg-blue-100 border-b border-gray-100 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+                  onClick={() => handleIconClick(tool.id)}
+                >
+                  <span className="mr-3 text-lg">{tool.icon}</span>
+                  <div className="flex-1 text-black text-sm font-medium">{tool.label}</div>
+                  <div className="w-20 text-gray-600 text-xs">{tool.category}</div>
+                </div>
+              ))}
+            </div>
           </div>
         ))}
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="min-h-screen bg-win98-desktop flex flex-col overflow-hidden">
@@ -169,7 +225,7 @@ const PDFTools = () => {
             </button>
           </div>
 
-          <div className={`bg-white min-h-[500px] ${viewMode === 'grid' ? 'relative' : ''}`}>
+          <div className={`bg-white min-h-[600px] ${viewMode === 'grid' ? 'relative overflow-auto' : ''}`}>
             {viewMode === 'grid' ? renderGridView() : renderListView()}
           </div>
         </div>

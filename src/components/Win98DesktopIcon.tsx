@@ -7,6 +7,7 @@ interface Win98DesktopIconProps {
   position?: { x: number, y: number };
   onPositionChange?: (id: string, position: { x: number, y: number }) => void;
   onClick?: () => void;
+  variant?: 'desktop' | 'window'; // New prop for different backgrounds
 }
 
 const Win98DesktopIcon: React.FC<Win98DesktopIconProps> = ({ 
@@ -15,7 +16,8 @@ const Win98DesktopIcon: React.FC<Win98DesktopIconProps> = ({
   label, 
   position, 
   onPositionChange, 
-  onClick 
+  onClick,
+  variant = 'desktop' // Default to desktop variant
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [hasMovedDuringDrag, setHasMovedDuringDrag] = useState(false);
@@ -125,7 +127,9 @@ const Win98DesktopIcon: React.FC<Win98DesktopIconProps> = ({
           <div className={`text-xs text-center font-ms-sans px-1 py-0.5 max-w-16 break-words ${
             isSelected 
               ? 'text-white bg-win98-highlight' 
-              : 'text-black font-medium'
+              : variant === 'desktop' 
+                ? 'text-white font-medium shadow-sm'
+                : 'text-black font-medium'
           } rounded`}>
             {label}
           </div>

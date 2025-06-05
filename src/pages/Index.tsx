@@ -16,6 +16,8 @@ const Index = () => {
     { id: 'recyclebin', label: 'Recycle Bin', icon: '🗑️' },
     { id: 'texttools', label: 'Text Tools', icon: '📁' },
     { id: 'pdftools', label: 'PDF <3', icon: '📁' },
+    { id: 'audiotools', label: 'Audio Tools', icon: '🎵' },
+    { id: 'imagetools', label: 'Image Tools', icon: '🖼️' },
     { id: 'msdos', label: 'MS-DOS', icon: '📝' },
     { id: 'explorer', label: 'Internet Explorer', icon: '🌐' },
     { id: 'texttoolsicon', label: 'Text Case Convert', icon: 'Aa' },
@@ -109,6 +111,10 @@ const Index = () => {
       navigate('/text-tools');
     } else if (id === 'pdftools') {
       navigate('/pdf-tools');
+    } else if (id === 'audiotools') {
+      navigate('/audio-tools');
+    } else if (id === 'imagetools') {
+      navigate('/image-tools');
     } else {
       toast({
         title: "Icon Clicked",

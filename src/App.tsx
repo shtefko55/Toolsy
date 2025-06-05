@@ -1,54 +1,37 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
-import TextConverter from "./pages/TextConverter";
+import TestPage from "./pages/TestPage";
 import TextTools from "./pages/TextTools";
-import PDFTools from "./pages/PDFTools";
-import TextEditor from "./pages/text-tools/TextEditor";
-import WordCombiner from "./pages/text-tools/WordCombiner";
-import MD5Generator from "./pages/text-tools/MD5Generator";
-import InvisibleCharGenerator from "./pages/text-tools/InvisibleCharGenerator";
-import MergePDF from "./pages/pdf-tools/MergePDF";
-import SplitPDF from "./pages/pdf-tools/SplitPDF";
-import WordToPDF from "./pages/pdf-tools/WordToPDF";
-import JpgToPDF from "./pages/pdf-tools/JpgToPDF";
-import RotatePDF from "./pages/pdf-tools/RotatePDF";
-import NotFound from "./pages/NotFound";
+import AudioTools from "./pages/AudioTools";
+import ImageTools from "./pages/ImageToolsSimple";
+import ImageCompressor from "./pages/image-tools/ImageCompressor";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/text-tools" element={<TextTools />} />
-          <Route path="/text-tools/text-converter" element={<TextConverter />} />
-          <Route path="/text-tools/text-editor" element={<TextEditor />} />
-          <Route path="/text-tools/word-combiner" element={<WordCombiner />} />
-          <Route path="/text-tools/md5-generator" element={<MD5Generator />} />
-          <Route path="/text-tools/invisible-char-generator" element={<InvisibleCharGenerator />} />
-          <Route path="/pdf-tools" element={<PDFTools />} />
-          <Route path="/pdf-tools/merge-pdf" element={<MergePDF />} />
-          <Route path="/pdf-tools/split-pdf" element={<SplitPDF />} />
-          <Route path="/pdf-tools/word-to-pdf" element={<WordToPDF />} />
-          <Route path="/pdf-tools/jpg-to-pdf" element={<JpgToPDF />} />
-          <Route path="/pdf-tools/rotate-pdf" element={<RotatePDF />} />
-          {/* Redirect old path to new one */}
-          <Route path="/text-converter" element={<Navigate to="/text-tools/text-converter" />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/test" element={<TestPage />} />
+            <Route path="/text-tools" element={<TextTools />} />
+            <Route path="/audio-tools" element={<AudioTools />} />
+            <Route path="/image-tools" element={<ImageTools />} />
+            <Route path="/image-tools/image-compressor" element={<ImageCompressor />} />
+            <Route path="*" element={<div>404 - Page Not Found</div>} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

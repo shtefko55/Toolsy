@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -6,13 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from "@/components/ui/use-toast";
 import Win98Taskbar from '../../components/Win98Taskbar';
 import { Upload, FileText, Download, Trash2 } from 'lucide-react';
-import { PDFDocument } from 'pdf-lib';
+import { PDFProcessor } from '@/lib/pdfUtils';
 
 const JpgToPDF = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
@@ -44,69 +44,31 @@ const JpgToPDF = () => {
     }
 
     setIsProcessing(true);
+    setProgress(0);
     
     try {
-      console.log('Starting PDF conversion for files:', selectedFiles.map(f => f.name));
+      const pdfBytes = await PDFProcessor.imagesToPDF(selectedFiles, setProgress);
       
-      // Create a new PDF document
-      const pdfDoc = await PDFDocument.create();
-      
-      for (const file of selectedFiles) {
-        console.log('Processing file:', file.name);
-        
-        // Convert file to array buffer
-        const arrayBuffer = await file.arrayBuffer();
-        
-        let image;
-        if (file.type === 'image/jpeg' || file.type === 'image/jpg') {
-          image = await pdfDoc.embedJpg(arrayBuffer);
-        } else if (file.type === 'image/png') {
-          image = await pdfDoc.embedPng(arrayBuffer);
-        } else {
-          console.log('Unsupported image type:', file.type);
-          continue;
-        }
-        
-        // Add a page with the image
-        const page = pdfDoc.addPage([image.width, image.height]);
-        page.drawImage(image, {
-          x: 0,
-          y: 0,
-          width: image.width,
-          height: image.height,
-        });
-      }
-      
-      // Serialize the PDF document to bytes
-      const pdfBytes = await pdfDoc.save();
-      
-      // Create download link
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'converted-images.pdf';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      PDFProcessor.downloadPDF(pdfBytes, 'converted-images.pdf');
       
       toast({
         title: "Success!",
         description: `Successfully converted ${selectedFiles.length} image(s) to PDF`,
       });
       
-      console.log('PDF conversion completed successfully');
+      // Clear files after successful conversion
+      setSelectedFiles([]);
       
     } catch (error) {
       console.error('Error converting images to PDF:', error);
       toast({
         title: "Error",
-        description: "Failed to convert images to PDF. Please try again.",
+        description: "Failed to convert images to PDF. Please ensure all files are valid images.",
         variant: "destructive"
       });
     } finally {
       setIsProcessing(false);
+      setProgress(0);
     }
   };
 
@@ -157,6 +119,7 @@ const JpgToPDF = () => {
                       accept="image/jpeg,image/jpg,image/png"
                       onChange={handleFileSelect}
                       className="hidden"
+                      disabled={isProcessing}
                     />
                   </label>
                   <p className="text-gray-500 mt-2">Supports JPG and PNG formats</p>
@@ -178,11 +141,24 @@ const JpgToPDF = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => removeFile(index)}
+                          disabled={isProcessing}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {isProcessing && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">Converting images... {Math.round(progress)}%</div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                        style={{ width: `${progress}%` }}
+                      ></div>
+                    </div>
                   </div>
                 )}
 
@@ -199,7 +175,7 @@ const JpgToPDF = () => {
                   <Button
                     variant="outline"
                     onClick={() => setSelectedFiles([])}
-                    disabled={selectedFiles.length === 0}
+                    disabled={selectedFiles.length === 0 || isProcessing}
                   >
                     Clear All
                   </Button>
