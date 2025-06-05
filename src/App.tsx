@@ -16,6 +16,7 @@ import Soundboard from "./pages/audio-tools/Soundboard";
 import ToneGenerator from "./pages/audio-tools/ToneGenerator";
 import WhiteNoiseGenerator from "./pages/audio-tools/WhiteNoiseGenerator";
 import AudioConverter from "./pages/audio-tools/AudioConverter";
+import AudioConverterServer from "./pages/audio-tools/AudioConverterServer";
 import AudioNormalizer from "./pages/audio-tools/AudioNormalizer";
 import AudioVisualizer from "./pages/audio-tools/AudioVisualizer";
 
@@ -40,6 +41,7 @@ const App = () => {
             <Route path="/audio-tools/tone-generator" element={<ToneGenerator />} />
             <Route path="/audio-tools/white-noise-generator" element={<WhiteNoiseGenerator />} />
             <Route path="/audio-tools/audio-converter" element={<AudioConverter />} />
+          <Route path="/audio-tools/audio-converter-pro" element={<AudioConverterServer />} />
             <Route path="/audio-tools/audio-normalizer" element={<AudioNormalizer />} />
             <Route path="/audio-tools/audio-visualizer" element={<AudioVisualizer />} />
             <Route path="/image-tools" element={<ImageTools />} />

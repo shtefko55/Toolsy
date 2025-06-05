@@ -70,6 +70,7 @@ const AudioTools = () => {
     
     // Conversion & Import/Export
     { id: 'audio-converter', label: 'Audio Converter', icon: '🔄', category: 'Conversion', description: 'Convert formats using JavaScript libraries (WAV ↔ MP3)' },
+    { id: 'audio-converter-pro', label: 'Pro Audio Converter', icon: '🚀', category: 'Conversion', description: 'Server-side FFmpeg conversion - No browser crashes!' },
     
     // Detection & Analysis
     { id: 'beat-detector', label: 'Beat Detector (RMS/Peak)', icon: '💓', category: 'Analysis', description: 'Detect beats using RMS energy or peak volume' },
@@ -127,7 +128,7 @@ const AudioTools = () => {
     const toolsWithRoutes = [
       'audio-player', 'voice-recorder', 'metronome', 'soundboard', 
       'tone-generator', 'white-noise-generator', 'audio-converter', 
-      'audio-normalizer', 'audio-visualizer'
+      'audio-converter-pro', 'audio-normalizer', 'audio-visualizer'
     ];
     
     if (toolsWithRoutes.includes(id)) {
