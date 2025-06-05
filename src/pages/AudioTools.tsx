@@ -126,7 +126,8 @@ const AudioTools = () => {
     // Define which tools have working implementations
     const toolsWithRoutes = [
       'audio-player', 'voice-recorder', 'metronome', 'soundboard', 
-      'tone-generator', 'white-noise-generator', 'spectrum-analyzer', 'oscilloscope'
+      'tone-generator', 'white-noise-generator', 'audio-converter', 
+      'audio-normalizer', 'audio-visualizer'
     ];
     
     if (toolsWithRoutes.includes(id)) {
