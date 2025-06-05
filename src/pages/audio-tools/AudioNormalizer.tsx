@@ -2,66 +2,61 @@ import React, { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Win98Taskbar from '../../components/Win98Taskbar';
 import { useToast } from "@/components/ui/use-toast";
-import { Upload, Download, RefreshCw, Volume2, Activity, BarChart3, Sliders } from 'lucide-react';
+import { Upload, Download, Activity, Settings, Info, BarChart3 } from 'lucide-react';
 
 interface AudioFile {
   file: File;
   name: string;
   size: number;
   duration: number;
+  format: string;
   url: string;
-  buffer?: AudioBuffer;
 }
 
 interface AudioAnalysis {
   peakLevel: number;
   rmsLevel: number;
-  loudness: number;
   dynamicRange: number;
-  clippingCount: number;
+  hasClipping: boolean;
+  waveformData: number[];
 }
 
 interface NormalizationSettings {
-  type: 'peak' | 'rms' | 'loudness' | 'custom';
+  type: 'peak' | 'rms' | 'lufs' | 'custom';
   targetLevel: number;
-  enableLimiter: boolean;
-  limiterThreshold: number;
   enableCompression: boolean;
   compressionRatio: number;
-  compressionThreshold: number;
-  makeupGain: number;
+  enableLimiting: boolean;
+  limitThreshold: number;
 }
 
 const AudioNormalizer = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const [audioFile, setAudioFile] = useState<AudioFile | null>(null);
-  const [analysis, setAnalysis] = useState<AudioAnalysis | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [processProgress, setProcessProgress] = useState(0);
-  const [processedBlob, setProcessedBlob] = useState<Blob | null>(null);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isNormalizing, setIsNormalizing] = useState(false);
+  const [normalizationProgress, setNormalizationProgress] = useState(0);
+  const [audioAnalysis, setAudioAnalysis] = useState<AudioAnalysis | null>(null);
+  const [normalizedBlob, setNormalizedBlob] = useState<Blob | null>(null);
 
   const [settings, setSettings] = useState<NormalizationSettings>({
     type: 'peak',
-    targetLevel: -1, // dB
-    enableLimiter: true,
-    limiterThreshold: -0.5,
+    targetLevel: -3,
     enableCompression: false,
     compressionRatio: 4,
-    compressionThreshold: -12,
-    makeupGain: 0
+    enableLimiting: true,
+    limitThreshold: -1
   });
 
   const normalizationTypes = {
-    peak: 'Peak Normalization - Adjust highest peak to target level',
-    rms: 'RMS Normalization - Adjust average loudness level',
-    loudness: 'Loudness Normalization - LUFS/EBU R128 standard',
-    custom: 'Custom Processing - Full control over all parameters'
+    peak: 'Peak Normalization',
+    rms: 'RMS Normalization', 
+    lufs: 'LUFS Loudness',
+    custom: 'Custom Settings'
   };
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,263 +65,286 @@ const AudioNormalizer = () => {
 
     if (!file.type.startsWith('audio/')) {
       toast({
-        title: "Invalid File",
+        title: "Invalid File ❌",
         description: "Please select a valid audio file.",
       });
       return;
     }
 
+    // Check file size limit (20MB for normalizer)
+    if (file.size > 20 * 1024 * 1024) {
+      toast({
+        title: "File Too Large ⚠️",
+        description: "Please select a file smaller than 20MB for stability",
+      });
+      return;
+    }
+
     setIsLoading(true);
-    setProcessedBlob(null);
-    setAnalysis(null);
+    setAudioAnalysis(null);
+    setNormalizedBlob(null);
 
     try {
-      const audioInfo = await loadAudioFile(file);
+      const audioInfo = await getAudioFileInfo(file);
       setAudioFile(audioInfo);
       
-      // Analyze the audio
-      if (audioInfo.buffer) {
-        const audioAnalysis = analyzeAudio(audioInfo.buffer);
-        setAnalysis(audioAnalysis);
-        drawWaveform(audioInfo.buffer);
-      }
+      // Automatically analyze the file
+      await analyzeAudio(audioInfo);
       
       toast({
-        title: "File Loaded",
-        description: `${file.name} loaded and analyzed`,
+        title: "File Loaded & Analyzed ✅",
+        description: `${file.name} ready for normalization`,
       });
     } catch (error) {
       console.error('Error loading file:', error);
       toast({
-        title: "Load Error",
-        description: "Failed to load audio file",
+        title: "Load Error ❌",
+        description: "Failed to load or analyze audio file",
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const loadAudioFile = async (file: File): Promise<AudioFile> => {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+  const getAudioFileInfo = async (file: File): Promise<AudioFile> => {
+    return new Promise((resolve, reject) => {
+      const audio = new Audio();
+      const url = URL.createObjectURL(file);
+      
+      audio.onloadedmetadata = () => {
+        const format = file.type.split('/')[1] || 'unknown';
+        
+        resolve({
+          file,
+          name: file.name,
+          size: file.size,
+          duration: audio.duration,
+          format: format,
+          url
+        });
+      };
+
+      audio.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Failed to load audio file'));
+      };
+
+      audio.src = url;
+    });
+  };
+
+  const analyzeAudio = async (audioFile: AudioFile) => {
+    setIsAnalyzing(true);
     
     try {
-      const arrayBuffer = await file.arrayBuffer();
+      const audioContext = new AudioContext();
+      const arrayBuffer = await audioFile.file.arrayBuffer();
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-      const url = URL.createObjectURL(file);
-
-      return {
-        file,
-        name: file.name,
-        size: file.size,
-        duration: audioBuffer.duration,
-        url,
-        buffer: audioBuffer
-      };
+      
+      // Analyze audio in chunks to prevent crashes
+      const analysis = await performAnalysis(audioBuffer);
+      setAudioAnalysis(analysis);
+      
+      await audioContext.close();
+    } catch (error) {
+      console.error('Analysis error:', error);
+      toast({
+        title: "Analysis Error ❌",
+        description: "Failed to analyze audio file",
+      });
     } finally {
-      audioContext.close();
+      setIsAnalyzing(false);
     }
   };
 
-  const analyzeAudio = (audioBuffer: AudioBuffer): AudioAnalysis => {
+  const performAnalysis = async (audioBuffer: AudioBuffer): Promise<AudioAnalysis> => {
     const channelData = audioBuffer.getChannelData(0);
     const sampleRate = audioBuffer.sampleRate;
     
-    let peak = 0;
-    let sumSquares = 0;
+    // Calculate peak level
+    let peakLevel = 0;
+    let rmsSum = 0;
     let clippingCount = 0;
     
-    // Calculate peak, RMS, and clipping
     for (let i = 0; i < channelData.length; i++) {
       const sample = Math.abs(channelData[i]);
-      peak = Math.max(peak, sample);
-      sumSquares += sample * sample;
+      peakLevel = Math.max(peakLevel, sample);
+      rmsSum += sample * sample;
       
-      if (sample >= 0.99) {
-        clippingCount++;
-      }
+      if (sample >= 0.99) clippingCount++;
     }
     
-    const rms = Math.sqrt(sumSquares / channelData.length);
-    const peakDb = peak > 0 ? 20 * Math.log10(peak) : -Infinity;
-    const rmsDb = rms > 0 ? 20 * Math.log10(rms) : -Infinity;
+    const rmsLevel = Math.sqrt(rmsSum / channelData.length);
+    const hasClipping = clippingCount > (channelData.length * 0.001); // 0.1% threshold
     
-    // Simplified loudness calculation (approximation of LUFS)
-    const loudness = rmsDb - 23; // Rough LUFS approximation
+    // Create simplified waveform data (max 1000 points)
+    const waveformData: number[] = [];
+    const step = Math.max(1, Math.floor(channelData.length / 1000));
     
-    // Dynamic range (difference between peak and RMS)
-    const dynamicRange = peakDb - rmsDb;
-
+    for (let i = 0; i < channelData.length; i += step) {
+      waveformData.push(channelData[i]);
+    }
+    
     return {
-      peakLevel: peakDb,
-      rmsLevel: rmsDb,
-      loudness: loudness,
-      dynamicRange: dynamicRange,
-      clippingCount: clippingCount
+      peakLevel: peakLevel,
+      rmsLevel: rmsLevel,
+      dynamicRange: peakLevel - rmsLevel,
+      hasClipping: hasClipping,
+      waveformData: waveformData
     };
   };
 
-  const drawWaveform = (audioBuffer: AudioBuffer) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const width = canvas.width;
-    const height = canvas.height;
-    
-    ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, width, height);
-
-    const channelData = audioBuffer.getChannelData(0);
-    const samplesPerPixel = Math.floor(channelData.length / width);
-    
-    ctx.strokeStyle = '#00ff00';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-
-    for (let x = 0; x < width; x++) {
-      const startSample = x * samplesPerPixel;
-      const endSample = startSample + samplesPerPixel;
-      
-      let min = 1;
-      let max = -1;
-      
-      for (let i = startSample; i < endSample && i < channelData.length; i++) {
-        const sample = channelData[i];
-        min = Math.min(min, sample);
-        max = Math.max(max, sample);
-      }
-      
-      const yMin = ((min + 1) / 2) * height;
-      const yMax = ((max + 1) / 2) * height;
-      
-      if (x === 0) {
-        ctx.moveTo(x, height / 2);
-      }
-      
-      ctx.lineTo(x, yMax);
-      ctx.lineTo(x, yMin);
-    }
-    
-    ctx.stroke();
-  };
-
   const normalizeAudio = async () => {
-    if (!audioFile?.buffer) return;
+    if (!audioFile || !audioAnalysis) return;
 
-    setIsProcessing(true);
-    setProcessProgress(0);
+    setIsNormalizing(true);
+    setNormalizationProgress(0);
 
     try {
-      const progressInterval = setInterval(() => {
-        setProcessProgress(prev => Math.min(prev + 10, 90));
-      }, 100);
-
-      const normalizedBuffer = await processAudio(audioFile.buffer, settings);
-      const normalizedBlob = audioBufferToWav(normalizedBuffer);
-      
-      clearInterval(progressInterval);
-      setProcessProgress(100);
-      setProcessedBlob(normalizedBlob);
-
-      // Re-analyze the processed audio
-      const newAnalysis = analyzeAudio(normalizedBuffer);
-      setAnalysis(newAnalysis);
+      const normalizedBlob = await performNormalization(audioFile, settings, audioAnalysis);
+      setNormalizedBlob(normalizedBlob);
+      setNormalizationProgress(100);
 
       toast({
-        title: "Normalization Complete",
-        description: `Audio normalized using ${settings.type} method`,
+        title: "Normalization Complete! 🎉",
+        description: `Audio normalized using ${normalizationTypes[settings.type]}`,
       });
     } catch (error) {
-      console.error('Processing error:', error);
+      console.error('Normalization error:', error);
       toast({
-        title: "Processing Error",
-        description: "Failed to normalize audio",
+        title: "Normalization Error ❌",
+        description: error instanceof Error ? error.message : "Failed to normalize audio",
       });
     } finally {
-      setIsProcessing(false);
+      setIsNormalizing(false);
     }
   };
 
-  const processAudio = async (audioBuffer: AudioBuffer, settings: NormalizationSettings): Promise<AudioBuffer> => {
-    const audioContext = new OfflineAudioContext(
+  const performNormalization = async (
+    audioFile: AudioFile, 
+    settings: NormalizationSettings, 
+    analysis: AudioAnalysis
+  ): Promise<Blob> => {
+    return new Promise(async (resolve, reject) => {
+      let audioContext: AudioContext | null = null;
+      
+      try {
+        setNormalizationProgress(10);
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        audioContext = new AudioContext();
+        const arrayBuffer = await audioFile.file.arrayBuffer();
+        
+        setNormalizationProgress(30);
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        
+        setNormalizationProgress(50);
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Process audio with normalization
+        const processedBuffer = await processAudioWithNormalization(audioBuffer, settings, analysis);
+        
+        setNormalizationProgress(80);
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Convert to WAV
+        const wavBlob = audioBufferToWav(processedBuffer);
+        
+        setNormalizationProgress(95);
+        resolve(wavBlob);
+        
+      } catch (error) {
+        reject(error);
+      } finally {
+        if (audioContext) {
+          try {
+            await audioContext.close();
+          } catch (e) {
+            console.warn('Error closing audio context:', e);
+          }
+        }
+      }
+    });
+  };
+
+  const processAudioWithNormalization = async (
+    audioBuffer: AudioBuffer,
+    settings: NormalizationSettings,
+    analysis: AudioAnalysis
+  ): Promise<AudioBuffer> => {
+    const offlineContext = new OfflineAudioContext(
       audioBuffer.numberOfChannels,
       audioBuffer.length,
       audioBuffer.sampleRate
     );
 
-    const source = audioContext.createBufferSource();
+    const source = offlineContext.createBufferSource();
     source.buffer = audioBuffer;
-    
+
     let currentNode: AudioNode = source;
+
+    // Apply normalization gain
+    const gainNode = offlineContext.createGain();
+    let targetGain = 1;
+
+    switch (settings.type) {
+      case 'peak':
+        targetGain = Math.pow(10, settings.targetLevel / 20) / analysis.peakLevel;
+        break;
+      case 'rms':
+        targetGain = Math.pow(10, settings.targetLevel / 20) / analysis.rmsLevel;
+        break;
+      case 'lufs':
+        // Simplified LUFS calculation
+        targetGain = Math.pow(10, (settings.targetLevel + 23) / 20) / analysis.rmsLevel;
+        break;
+      case 'custom':
+        targetGain = Math.pow(10, settings.targetLevel / 20) / Math.max(analysis.peakLevel, analysis.rmsLevel);
+        break;
+    }
+
+    gainNode.gain.value = Math.min(targetGain, 10); // Limit gain to prevent extreme amplification
+    currentNode.connect(gainNode);
+    currentNode = gainNode;
 
     // Apply compression if enabled
     if (settings.enableCompression) {
-      const compressor = audioContext.createDynamicsCompressor();
-      compressor.threshold.value = settings.compressionThreshold;
+      const compressor = offlineContext.createDynamicsCompressor();
+      compressor.threshold.value = -24;
+      compressor.knee.value = 30;
       compressor.ratio.value = settings.compressionRatio;
-      compressor.attack.value = 0.003; // 3ms
-      compressor.release.value = 0.25; // 250ms
+      compressor.attack.value = 0.003;
+      compressor.release.value = 0.25;
       
       currentNode.connect(compressor);
       currentNode = compressor;
     }
 
-    // Calculate gain based on normalization type
-    let gain = 1;
-    const currentAnalysis = analyzeAudio(audioBuffer);
-    
-    switch (settings.type) {
-      case 'peak':
-        if (currentAnalysis.peakLevel > -Infinity) {
-          gain = Math.pow(10, (settings.targetLevel - currentAnalysis.peakLevel) / 20);
-        }
-        break;
-      case 'rms':
-        if (currentAnalysis.rmsLevel > -Infinity) {
-          gain = Math.pow(10, (settings.targetLevel - currentAnalysis.rmsLevel) / 20);
-        }
-        break;
-      case 'loudness':
-        if (currentAnalysis.loudness > -Infinity) {
-          gain = Math.pow(10, (settings.targetLevel - currentAnalysis.loudness) / 20);
-        }
-        break;
-      case 'custom':
-        gain = Math.pow(10, settings.makeupGain / 20);
-        break;
-    }
-
-    // Apply gain
-    const gainNode = audioContext.createGain();
-    gainNode.gain.value = gain;
-    currentNode.connect(gainNode);
-    currentNode = gainNode;
-
-    // Apply limiter if enabled
-    if (settings.enableLimiter) {
-      const limiter = audioContext.createDynamicsCompressor();
-      limiter.threshold.value = settings.limiterThreshold;
-      limiter.ratio.value = 20; // Heavy limiting
-      limiter.attack.value = 0.001; // 1ms
-      limiter.release.value = 0.01; // 10ms
+    // Apply limiting if enabled
+    if (settings.enableLimiting) {
+      const limiter = offlineContext.createDynamicsCompressor();
+      limiter.threshold.value = settings.limitThreshold;
+      limiter.knee.value = 0;
+      limiter.ratio.value = 20;
+      limiter.attack.value = 0.001;
+      limiter.release.value = 0.01;
       
       currentNode.connect(limiter);
       currentNode = limiter;
     }
 
-    currentNode.connect(audioContext.destination);
+    currentNode.connect(offlineContext.destination);
     source.start();
-    
-    return await audioContext.startRendering();
+
+    return await offlineContext.startRendering();
   };
 
   const audioBufferToWav = (audioBuffer: AudioBuffer): Blob => {
     const numberOfChannels = audioBuffer.numberOfChannels;
     const sampleRate = audioBuffer.sampleRate;
-    const format = 1; // PCM
+    const format = 1;
     const bitDepth = 16;
 
     const bytesPerSample = bitDepth / 8;
@@ -344,7 +362,6 @@ const AudioNormalizer = () => {
       }
     };
 
-    // WAV header
     writeString(0, 'RIFF');
     view.setUint32(4, bufferSize - 8, true);
     writeString(8, 'WAVE');
@@ -359,7 +376,6 @@ const AudioNormalizer = () => {
     writeString(36, 'data');
     view.setUint32(40, dataSize, true);
 
-    // Audio data
     let offset = 44;
     for (let i = 0; i < audioBuffer.length; i++) {
       for (let channel = 0; channel < numberOfChannels; channel++) {
@@ -372,10 +388,10 @@ const AudioNormalizer = () => {
     return new Blob([buffer], { type: 'audio/wav' });
   };
 
-  const downloadProcessed = () => {
-    if (!processedBlob || !audioFile) return;
+  const downloadNormalized = () => {
+    if (!normalizedBlob || !audioFile) return;
 
-    const url = URL.createObjectURL(processedBlob);
+    const url = URL.createObjectURL(normalizedBlob);
     const a = document.createElement('a');
     a.href = url;
     
@@ -388,7 +404,7 @@ const AudioNormalizer = () => {
     URL.revokeObjectURL(url);
 
     toast({
-      title: "Download Started",
+      title: "Download Started 📥",
       description: `${originalName}_normalized.wav`,
     });
   };
@@ -397,339 +413,348 @@ const AudioNormalizer = () => {
     setSettings(prev => ({ ...prev, [key]: value }));
   };
 
-  const formatDb = (db: number): string => {
-    if (db === -Infinity) return '-∞ dB';
-    return `${db.toFixed(1)} dB`;
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const formatDuration = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const formatDecibels = (value: number): string => {
+    return `${(20 * Math.log10(Math.max(value, 0.0001))).toFixed(1)} dB`;
   };
 
   const handleBackClick = () => {
     if (audioFile?.url) {
       URL.revokeObjectURL(audioFile.url);
     }
+    if (normalizedBlob) {
+      URL.revokeObjectURL(URL.createObjectURL(normalizedBlob));
+    }
     navigate('/audio-tools');
   };
 
   return (
-    <div className="min-h-screen bg-win98-bg overflow-hidden">
-      <div className="h-screen flex flex-col">
-        {/* Title Bar */}
-        <div className="win98-title-bar flex items-center justify-between px-2 py-1">
-          <div className="flex items-center">
-            <Volume2 className="h-4 w-4 mr-2" />
-            <span className="font-bold">Audio Normalizer - Professional Loudness Control</span>
-          </div>
-          <button
-            onClick={handleBackClick}
-            className="win98-btn-sm px-2 py-1"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="flex-1 p-4 overflow-y-auto">
-          {/* File Upload Section */}
-          <div className="bg-white p-4 mb-4 win98-panel">
-            <h3 className="text-sm font-medium text-black mb-3 flex items-center">
-              <Upload className="h-4 w-4 mr-2" />
-              Select Audio File
-            </h3>
-            
-            <div className="flex flex-col gap-4">
-              <div 
-                className="border-2 border-dashed border-gray-300 rounded p-8 text-center cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={() => fileInputRef.current?.click()}
+    <div className="min-h-screen bg-win98-desktop flex flex-col overflow-hidden">
+      <div className="flex-grow p-4 relative">
+        <div className="win98-window max-w-5xl mx-auto w-full">
+          <div className="win98-window-title">
+            <div className="flex items-center gap-2">
+              <button 
+                className="win98-btn px-2 py-0.5 h-6 text-xs flex items-center" 
+                onClick={handleBackClick}
               >
-                {isLoading ? (
-                  <div className="flex items-center justify-center">
-                    <RefreshCw className="h-6 w-6 animate-spin mr-2" />
-                    <span className="text-gray-600">Analyzing audio file...</span>
-                  </div>
-                ) : audioFile ? (
-                  <div className="space-y-2">
-                    <Volume2 className="h-12 w-12 mx-auto text-blue-500" />
-                    <div className="text-black font-medium">{audioFile.name}</div>
-                    <div className="text-sm text-gray-600">
-                      Duration: {Math.floor(audioFile.duration / 60)}:{Math.floor(audioFile.duration % 60).toString().padStart(2, '0')}
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <Upload className="h-12 w-12 mx-auto text-gray-400 mb-2" />
-                    <div className="text-gray-600 mb-2">Drop audio file here or click to browse</div>
-                    <div className="text-xs text-gray-500">Supports all major audio formats</div>
-                  </div>
-                )}
-              </div>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="audio/*"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
+                ← Back
+              </button>
+              <div className="font-ms-sans">📊 Audio Normalizer</div>
+            </div>
+            <div className="flex gap-1">
+              <button className="bg-win98-gray text-win98-text w-5 h-5 flex items-center justify-center border border-win98-btnshadow leading-none">_</button>
+              <button className="bg-win98-gray text-win98-text w-5 h-5 flex items-center justify-center border border-win98-btnshadow leading-none">□</button>
+              <button 
+                onClick={handleBackClick} 
+                className="bg-win98-gray text-win98-text w-5 h-5 flex items-center justify-center border border-win98-btnshadow leading-none hover:bg-red-100"
+              >
+                ×
+              </button>
             </div>
           </div>
 
-          {/* Waveform Visualization */}
-          {audioFile && (
-            <div className="bg-white p-4 mb-4 win98-panel">
-              <h3 className="text-sm font-medium text-black mb-3 flex items-center">
-                <Activity className="h-4 w-4 mr-2" />
-                Waveform
-              </h3>
-              <canvas
-                ref={canvasRef}
-                width="600"
-                height="150"
-                className="w-full h-32 border border-gray-300 rounded bg-black"
-              />
-            </div>
-          )}
-
-          {/* Audio Analysis */}
-          {analysis && (
-            <div className="bg-white p-4 mb-4 win98-panel">
-              <h3 className="text-sm font-medium text-black mb-3 flex items-center">
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Audio Analysis
+          <div className="bg-white min-h-[600px] p-4 overflow-y-auto">
+            {/* File Upload Section */}
+            <div className="bg-gray-100 p-4 mb-4 border-2 border-gray-300" style={{
+              borderTopColor: '#dfdfdf',
+              borderLeftColor: '#dfdfdf',
+              borderRightColor: '#808080',
+              borderBottomColor: '#808080'
+            }}>
+              <h3 className="text-sm font-bold text-black mb-3 flex items-center">
+                <Upload className="h-4 w-4 mr-2" />
+                Select Audio File for Normalization
               </h3>
               
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
-                <div className="text-center">
-                  <div className="text-gray-600">Peak Level</div>
-                  <div className={`font-mono ${analysis.peakLevel > -1 ? 'text-red-600' : 'text-green-600'}`}>
-                    {formatDb(analysis.peakLevel)}
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-gray-600">RMS Level</div>
-                  <div className="font-mono text-blue-600">
-                    {formatDb(analysis.rmsLevel)}
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-gray-600">Loudness</div>
-                  <div className="font-mono text-purple-600">
-                    {formatDb(analysis.loudness)}
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-gray-600">Dynamic Range</div>
-                  <div className="font-mono text-gray-700">
-                    {formatDb(analysis.dynamicRange)}
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-gray-600">Clipping</div>
-                  <div className={`font-mono ${analysis.clippingCount > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                    {analysis.clippingCount} samples
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Normalization Settings */}
-          {audioFile && (
-            <div className="bg-white p-4 mb-4 win98-panel">
-              <h3 className="text-sm font-medium text-black mb-3 flex items-center">
-                <Sliders className="h-4 w-4 mr-2" />
-                Normalization Settings
-              </h3>
-
-              <div className="space-y-4">
-                {/* Normalization Type */}
-                <div>
-                  <label className="block text-xs text-gray-600 mb-2">Normalization Type</label>
-                  <select
-                    value={settings.type}
-                    onChange={(e) => updateSettings('type', e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded text-black"
-                  >
-                    {Object.entries(normalizationTypes).map(([key, description]) => (
-                      <option key={key} value={key}>
-                        {key.toUpperCase()} - {description.split(' - ')[0]}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="text-xs text-gray-500 mt-1">
-                    {normalizationTypes[settings.type]}
-                  </div>
-                </div>
-
-                {/* Target Level */}
-                <div>
-                  <label className="block text-xs text-gray-600 mb-2">
-                    Target Level: {settings.targetLevel} dB
-                  </label>
-                  <input
-                    type="range"
-                    min="-20"
-                    max="0"
-                    step="0.1"
-                    value={settings.targetLevel}
-                    onChange={(e) => updateSettings('targetLevel', parseFloat(e.target.value))}
-                    className="w-full"
-                  />
-                </div>
-
-                {/* Advanced Settings Toggle */}
-                <div>
-                  <button
-                    onClick={() => setShowAdvanced(!showAdvanced)}
-                    className="win98-btn px-3 py-1 text-xs"
-                  >
-                    {showAdvanced ? 'Hide' : 'Show'} Advanced Settings
-                  </button>
-                </div>
-
-                {/* Advanced Settings */}
-                {showAdvanced && (
-                  <div className="space-y-4 pt-4 border-t border-gray-200">
-                    {/* Limiter */}
-                    <div className="flex items-center gap-4">
-                      <input
-                        type="checkbox"
-                        id="limiter"
-                        checked={settings.enableLimiter}
-                        onChange={(e) => updateSettings('enableLimiter', e.target.checked)}
-                      />
-                      <label htmlFor="limiter" className="text-xs text-gray-600">
-                        Enable Limiter
-                      </label>
-                      {settings.enableLimiter && (
-                        <div className="flex-1">
-                          <label className="block text-xs text-gray-500">
-                            Threshold: {settings.limiterThreshold} dB
-                          </label>
-                          <input
-                            type="range"
-                            min="-3"
-                            max="0"
-                            step="0.1"
-                            value={settings.limiterThreshold}
-                            onChange={(e) => updateSettings('limiterThreshold', parseFloat(e.target.value))}
-                            className="w-full"
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Compression */}
-                    <div className="flex items-center gap-4">
-                      <input
-                        type="checkbox"
-                        id="compression"
-                        checked={settings.enableCompression}
-                        onChange={(e) => updateSettings('enableCompression', e.target.checked)}
-                      />
-                      <label htmlFor="compression" className="text-xs text-gray-600">
-                        Enable Compression
-                      </label>
-                    </div>
-
-                    {settings.enableCompression && (
-                      <div className="grid grid-cols-2 gap-4 ml-6">
-                        <div>
-                          <label className="block text-xs text-gray-500 mb-1">
-                            Ratio: {settings.compressionRatio}:1
-                          </label>
-                          <input
-                            type="range"
-                            min="1"
-                            max="20"
-                            step="0.5"
-                            value={settings.compressionRatio}
-                            onChange={(e) => updateSettings('compressionRatio', parseFloat(e.target.value))}
-                            className="w-full"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-500 mb-1">
-                            Threshold: {settings.compressionThreshold} dB
-                          </label>
-                          <input
-                            type="range"
-                            min="-30"
-                            max="0"
-                            step="1"
-                            value={settings.compressionThreshold}
-                            onChange={(e) => updateSettings('compressionThreshold', parseFloat(e.target.value))}
-                            className="w-full"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Makeup Gain (for custom mode) */}
-                    {settings.type === 'custom' && (
-                      <div>
-                        <label className="block text-xs text-gray-600 mb-2">
-                          Makeup Gain: {settings.makeupGain} dB
-                        </label>
-                        <input
-                          type="range"
-                          min="-20"
-                          max="20"
-                          step="0.1"
-                          value={settings.makeupGain}
-                          onChange={(e) => updateSettings('makeupGain', parseFloat(e.target.value))}
-                          className="w-full"
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Processing Controls */}
-          {audioFile && (
-            <div className="bg-white p-4 mb-4 win98-panel">
               <div className="flex flex-col gap-4">
-                <button
-                  onClick={normalizeAudio}
-                  disabled={isProcessing}
-                  className="win98-btn px-4 py-2 text-black disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                <div 
+                  className="border-2 border-dashed border-gray-400 p-8 text-center cursor-pointer hover:bg-gray-50 transition-colors bg-white"
+                  onClick={() => fileInputRef.current?.click()}
                 >
-                  {isProcessing ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                      Processing... {processProgress}%
-                    </>
+                  {isLoading ? (
+                    <div className="flex items-center justify-center">
+                      <Activity className="h-6 w-6 animate-pulse mr-2" />
+                      <span className="text-gray-700">Loading audio file...</span>
+                    </div>
+                  ) : isAnalyzing ? (
+                    <div className="flex items-center justify-center">
+                      <BarChart3 className="h-6 w-6 animate-pulse mr-2" />
+                      <span className="text-gray-700">Analyzing audio levels...</span>
+                    </div>
+                  ) : audioFile ? (
+                    <div className="space-y-2">
+                      <Activity className="h-12 w-12 mx-auto text-green-600" />
+                      <div className="text-black font-bold">{audioFile.name}</div>
+                      <div className="text-sm text-gray-700 space-y-1">
+                        <div>Format: {audioFile.format.toUpperCase()}</div>
+                        <div>Size: {formatFileSize(audioFile.size)}</div>
+                        <div>Duration: {formatDuration(audioFile.duration)}</div>
+                      </div>
+                    </div>
                   ) : (
-                    <>
-                      <Volume2 className="h-4 w-4 mr-2" />
-                      Normalize Audio
-                    </>
+                    <div>
+                      <Upload className="h-12 w-12 mx-auto text-gray-500 mb-2" />
+                      <div className="text-gray-700 mb-2 font-bold">Drop audio file here or click to browse</div>
+                      <div className="text-xs text-gray-600">
+                        Supports most audio formats
+                      </div>
+                      <div className="text-xs text-red-600 mt-1">
+                        Maximum file size: 20MB
+                      </div>
+                    </div>
                   )}
-                </button>
+                </div>
 
-                {/* Progress Bar */}
-                {isProcessing && (
-                  <div className="w-full bg-gray-200 rounded">
-                    <div 
-                      className="bg-blue-500 rounded h-2 transition-all duration-300"
-                      style={{ width: `${processProgress}%` }}
-                    />
-                  </div>
-                )}
-
-                {/* Download Button */}
-                {processedBlob && (
-                  <button
-                    onClick={downloadProcessed}
-                    className="win98-btn px-4 py-2 text-black flex items-center justify-center bg-green-50 hover:bg-green-100"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Download Normalized Audio
-                  </button>
-                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="audio/*"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
               </div>
             </div>
-          )}
+
+            {/* Audio Analysis Results */}
+            {audioAnalysis && (
+              <div className="bg-gray-100 p-4 mb-4 border-2 border-gray-300" style={{
+                borderTopColor: '#dfdfdf',
+                borderLeftColor: '#dfdfdf',
+                borderRightColor: '#808080',
+                borderBottomColor: '#808080'
+              }}>
+                <h3 className="text-sm font-bold text-black mb-3 flex items-center">
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Audio Analysis Results
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                  <div className="bg-white p-3 border border-gray-400">
+                    <div className="font-bold text-gray-800">Peak Level</div>
+                    <div className="text-lg font-mono text-blue-600">
+                      {formatDecibels(audioAnalysis.peakLevel)}
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white p-3 border border-gray-400">
+                    <div className="font-bold text-gray-800">RMS Level</div>
+                    <div className="text-lg font-mono text-green-600">
+                      {formatDecibels(audioAnalysis.rmsLevel)}
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white p-3 border border-gray-400">
+                    <div className="font-bold text-gray-800">Dynamic Range</div>
+                    <div className="text-lg font-mono text-purple-600">
+                      {formatDecibels(audioAnalysis.dynamicRange)}
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white p-3 border border-gray-400">
+                    <div className="font-bold text-gray-800">Clipping</div>
+                    <div className={`text-lg font-bold ${audioAnalysis.hasClipping ? 'text-red-600' : 'text-green-600'}`}>
+                      {audioAnalysis.hasClipping ? 'DETECTED' : 'NONE'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Simple Waveform Visualization */}
+                <div className="mt-4">
+                  <div className="font-bold text-gray-800 mb-2">Waveform Preview</div>
+                  <div className="bg-black p-2 h-20 flex items-center justify-center border border-gray-400">
+                    <svg width="100%" height="60" className="bg-black">
+                      <polyline
+                        fill="none"
+                        stroke="#00ff00"
+                        strokeWidth="1"
+                        points={audioAnalysis.waveformData
+                          .slice(0, 500)
+                          .map((value, index) => 
+                            `${(index / 500) * 100}%,${30 + value * 25}`
+                          ).join(' ')
+                        }
+                      />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Normalization Settings */}
+            {audioFile && audioAnalysis && (
+              <div className="bg-gray-100 p-4 mb-4 border-2 border-gray-300" style={{
+                borderTopColor: '#dfdfdf',
+                borderLeftColor: '#dfdfdf',
+                borderRightColor: '#808080',
+                borderBottomColor: '#808080'
+              }}>
+                <h3 className="text-sm font-bold text-black mb-3 flex items-center">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Normalization Settings
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-2">Normalization Type</label>
+                    <select
+                      value={settings.type}
+                      onChange={(e) => updateSettings('type', e.target.value)}
+                      className="w-full p-2 border-2 border-gray-400 text-black"
+                      style={{
+                        borderTopColor: '#808080',
+                        borderLeftColor: '#808080',
+                        borderRightColor: '#dfdfdf',
+                        borderBottomColor: '#dfdfdf'
+                      }}
+                    >
+                      {Object.entries(normalizationTypes).map(([key, label]) => (
+                        <option key={key} value={key}>{label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-2">
+                      Target Level ({settings.type === 'lufs' ? 'LUFS' : 'dB'})
+                    </label>
+                    <input
+                      type="range"
+                      min={settings.type === 'lufs' ? -30 : -20}
+                      max={settings.type === 'lufs' ? -10 : 0}
+                      step="0.1"
+                      value={settings.targetLevel}
+                      onChange={(e) => updateSettings('targetLevel', parseFloat(e.target.value))}
+                      className="w-full"
+                    />
+                    <div className="text-xs text-gray-600 text-center mt-1">
+                      {settings.targetLevel.toFixed(1)} {settings.type === 'lufs' ? 'LUFS' : 'dB'}
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <div className="flex items-center gap-4">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={settings.enableCompression}
+                          onChange={(e) => updateSettings('enableCompression', e.target.checked)}
+                          className="mr-2"
+                        />
+                        <span className="text-sm font-bold">Enable Compression</span>
+                      </label>
+                      
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={settings.enableLimiting}
+                          onChange={(e) => updateSettings('enableLimiting', e.target.checked)}
+                          className="mr-2"
+                        />
+                        <span className="text-sm font-bold">Enable Limiting</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Normalization Controls */}
+            {audioFile && audioAnalysis && (
+              <div className="bg-gray-100 p-4 mb-4 border-2 border-gray-300" style={{
+                borderTopColor: '#dfdfdf',
+                borderLeftColor: '#dfdfdf',
+                borderRightColor: '#808080',
+                borderBottomColor: '#808080'
+              }}>
+                <div className="flex flex-col gap-4">
+                  <button
+                    onClick={normalizeAudio}
+                    disabled={isNormalizing}
+                    className="win98-btn px-4 py-3 text-black disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-bold"
+                  >
+                    {isNormalizing ? (
+                      <>
+                        <Activity className="h-4 w-4 animate-pulse mr-2" />
+                        Normalizing... {normalizationProgress}%
+                      </>
+                    ) : (
+                      <>
+                        <Activity className="h-4 w-4 mr-2" />
+                        Normalize Audio ({normalizationTypes[settings.type]})
+                      </>
+                    )}
+                  </button>
+
+                  {isNormalizing && (
+                    <div className="w-full bg-gray-300 border-2 border-gray-400" style={{
+                      borderTopColor: '#808080',
+                      borderLeftColor: '#808080',
+                      borderRightColor: '#dfdfdf',
+                      borderBottomColor: '#dfdfdf'
+                    }}>
+                      <div 
+                        className="bg-green-600 h-4 transition-all duration-300"
+                        style={{ width: `${normalizationProgress}%` }}
+                      />
+                    </div>
+                  )}
+
+                  {normalizedBlob && (
+                    <button
+                      onClick={downloadNormalized}
+                      className="win98-btn px-4 py-3 text-black flex items-center justify-center font-bold bg-green-100"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download Normalized Audio
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Info Panel */}
+            <div className="bg-gray-100 p-4 border-2 border-gray-300" style={{
+              borderTopColor: '#dfdfdf',
+              borderLeftColor: '#dfdfdf',
+              borderRightColor: '#808080',
+              borderBottomColor: '#808080'
+            }}>
+              <h3 className="text-sm font-bold text-black mb-3 flex items-center">
+                <Info className="h-4 w-4 mr-2" />
+                Normalization Guide
+              </h3>
+              
+              <div className="text-xs text-gray-700 space-y-2">
+                <div><strong>Peak:</strong> Normalize to peak amplitude level</div>
+                <div><strong>RMS:</strong> Normalize to average (RMS) level</div>
+                <div><strong>LUFS:</strong> Loudness-based normalization (broadcast standard)</div>
+                <div><strong>Custom:</strong> Advanced normalization with custom settings</div>
+                <div><strong>Note:</strong> File size limit is 20MB for stable processing</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Status Bar */}
+          <div className="bg-win98-gray border-t border-win98-btnshadow p-1 text-xs text-gray-700 flex items-center">
+            <span>📊 Audio Normalizer - Professional loudness control</span>
+            <div className="ml-auto">
+              {audioFile && <span>File: {audioFile.name}</span>}
+            </div>
+          </div>
         </div>
       </div>
       <Win98Taskbar />

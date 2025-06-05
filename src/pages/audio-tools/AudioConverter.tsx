@@ -38,7 +38,7 @@ const AudioConverter = () => {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const [settings, setSettings] = useState<ConversionSettings>({
-    format: 'mp3',
+    format: 'wav',
     quality: 'high',
     sampleRate: 44100,
     channels: 2,
@@ -46,8 +46,8 @@ const AudioConverter = () => {
   });
 
   const supportedFormats = {
-    input: ['mp3', 'wav', 'ogg', 'webm', 'aac', 'flac', 'm4a', 'mp4', '3gp', 'amr'],
-    output: ['wav', 'mp3', 'ogg', 'webm', 'aac', 'flac', 'm4a']
+    input: ['mp3', 'wav', 'ogg', 'webm', 'aac', 'flac', 'm4a', 'mp4'],
+    output: ['wav', 'webm']
   };
 
   const qualityPresets = {
@@ -59,12 +59,7 @@ const AudioConverter = () => {
 
   const formatDescriptions = {
     wav: 'Uncompressed high quality - large file size',
-    mp3: 'Compressed lossy - good balance of size and quality',
-    ogg: 'Open source compressed - excellent quality/size ratio',
-    webm: 'Web optimized - modern browser support',
-    aac: 'Advanced compression - Apple/iTunes standard',
-    flac: 'Lossless compression - audiophile quality',
-    m4a: 'Apple audio format - iTunes compatible'
+    webm: 'Web optimized - modern browser support'
   };
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -73,8 +68,17 @@ const AudioConverter = () => {
 
     if (!file.type.startsWith('audio/')) {
       toast({
-        title: "Invalid File",
+        title: "Invalid File ❌",
         description: "Please select a valid audio file.",
+      });
+      return;
+    }
+
+    // Check file size limit (25MB for stability)
+    if (file.size > 25 * 1024 * 1024) {
+      toast({
+        title: "File Too Large ⚠️",
+        description: "Please select a file smaller than 25MB for stability",
       });
       return;
     }
@@ -87,13 +91,13 @@ const AudioConverter = () => {
       setAudioFile(audioInfo);
       
       toast({
-        title: "File Loaded",
+        title: "File Loaded ✅",
         description: `${file.name} loaded successfully`,
       });
     } catch (error) {
       console.error('Error loading file:', error);
       toast({
-        title: "Load Error",
+        title: "Load Error ❌",
         description: "Failed to load audio file",
       });
     } finally {
@@ -115,8 +119,8 @@ const AudioConverter = () => {
           size: file.size,
           duration: audio.duration,
           format: format,
-          sampleRate: 44100, // Default, would need Web Audio API for accurate detection
-          channels: 2, // Default
+          sampleRate: 44100,
+          channels: 2,
           url
         });
       };
@@ -137,26 +141,19 @@ const AudioConverter = () => {
     setConversionProgress(0);
 
     try {
-      // Simulate progress updates
-      const progressInterval = setInterval(() => {
-        setConversionProgress(prev => Math.min(prev + 10, 90));
-      }, 200);
-
       const convertedBlob = await performConversion(audioFile, settings);
-      
-      clearInterval(progressInterval);
-      setConversionProgress(100);
       setConvertedBlob(convertedBlob);
+      setConversionProgress(100);
 
       toast({
-        title: "Conversion Complete",
+        title: "Conversion Complete! 🎉",
         description: `Audio converted to ${settings.format.toUpperCase()}`,
       });
     } catch (error) {
       console.error('Conversion error:', error);
       toast({
-        title: "Conversion Error",
-        description: "Failed to convert audio file",
+        title: "Conversion Error ❌",
+        description: error instanceof Error ? error.message : "Failed to convert audio file",
       });
     } finally {
       setIsConverting(false);
@@ -164,32 +161,51 @@ const AudioConverter = () => {
   };
 
   const performConversion = async (audioFile: AudioFile, settings: ConversionSettings): Promise<Blob> => {
-    // Create audio context for conversion
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    
-    try {
-      const arrayBuffer = await audioFile.file.arrayBuffer();
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    return new Promise(async (resolve, reject) => {
+      let audioContext: AudioContext | null = null;
       
-      // Apply channel and sample rate conversion if needed
-      const processedBuffer = await processAudioBuffer(audioBuffer, settings);
-      
-      // Convert to target format
-      switch (settings.format) {
-        case 'wav':
-          return audioBufferToWav(processedBuffer);
-        case 'mp3':
-          return await audioBufferToMp3(processedBuffer, settings);
-        case 'ogg':
-          return await audioBufferToOgg(processedBuffer, settings);
-        case 'webm':
-          return await audioBufferToWebM(processedBuffer, settings);
-        default:
-          return audioBufferToWav(processedBuffer);
+      try {
+        setConversionProgress(10);
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        setConversionProgress(20);
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const arrayBuffer = await audioFile.file.arrayBuffer();
+        setConversionProgress(40);
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        setConversionProgress(60);
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const processedBuffer = await processAudioBuffer(audioBuffer, settings);
+        setConversionProgress(80);
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        let result: Blob;
+        if (settings.format === 'wav') {
+          result = audioBufferToWav(processedBuffer);
+        } else {
+          result = await audioBufferToWebM(processedBuffer, settings);
+        }
+        
+        setConversionProgress(95);
+        resolve(result);
+        
+      } catch (error) {
+        reject(error);
+      } finally {
+        if (audioContext) {
+          try {
+            await audioContext.close();
+          } catch (e) {
+            console.warn('Error closing audio context:', e);
+          }
+        }
       }
-    } finally {
-      audioContext.close();
-    }
+    });
   };
 
   const processAudioBuffer = async (buffer: AudioBuffer, settings: ConversionSettings): Promise<AudioBuffer> => {
@@ -201,36 +217,16 @@ const AudioConverter = () => {
 
     const source = audioContext.createBufferSource();
     source.buffer = buffer;
-    
-    // Channel mixing if needed
-    if (settings.channels === 1 && buffer.numberOfChannels === 2) {
-      // Stereo to mono
-      const merger = audioContext.createChannelMerger(1);
-      const splitter = audioContext.createChannelSplitter(2);
-      const gainL = audioContext.createGain();
-      const gainR = audioContext.createGain();
-      
-      gainL.gain.value = 0.5;
-      gainR.gain.value = 0.5;
-      
-      source.connect(splitter);
-      splitter.connect(gainL, 0);
-      splitter.connect(gainR, 1);
-      gainL.connect(merger, 0, 0);
-      gainR.connect(merger, 0, 0);
-      merger.connect(audioContext.destination);
-    } else {
-      source.connect(audioContext.destination);
-    }
-
+    source.connect(audioContext.destination);
     source.start();
+    
     return await audioContext.startRendering();
   };
 
   const audioBufferToWav = (audioBuffer: AudioBuffer): Blob => {
     const numberOfChannels = audioBuffer.numberOfChannels;
     const sampleRate = audioBuffer.sampleRate;
-    const format = 1; // PCM
+    const format = 1;
     const bitDepth = 16;
 
     const bytesPerSample = bitDepth / 8;
@@ -248,7 +244,6 @@ const AudioConverter = () => {
       }
     };
 
-    // WAV header
     writeString(0, 'RIFF');
     view.setUint32(4, bufferSize - 8, true);
     writeString(8, 'WAVE');
@@ -263,7 +258,6 @@ const AudioConverter = () => {
     writeString(36, 'data');
     view.setUint32(40, dataSize, true);
 
-    // Audio data
     let offset = 44;
     for (let i = 0; i < audioBuffer.length; i++) {
       for (let channel = 0; channel < numberOfChannels; channel++) {
@@ -276,20 +270,7 @@ const AudioConverter = () => {
     return new Blob([buffer], { type: 'audio/wav' });
   };
 
-  const audioBufferToMp3 = async (audioBuffer: AudioBuffer, settings: ConversionSettings): Promise<Blob> => {
-    // For MP3 encoding, we would typically use a library like lamejs
-    // For now, we'll convert to WAV and simulate MP3 conversion
-    return audioBufferToWav(audioBuffer);
-  };
-
-  const audioBufferToOgg = async (audioBuffer: AudioBuffer, settings: ConversionSettings): Promise<Blob> => {
-    // For OGG encoding, we would use a library like oggjs
-    // For now, we'll convert to WAV and simulate OGG conversion
-    return audioBufferToWav(audioBuffer);
-  };
-
   const audioBufferToWebM = async (audioBuffer: AudioBuffer, settings: ConversionSettings): Promise<Blob> => {
-    // Use MediaRecorder for WebM encoding
     return new Promise((resolve, reject) => {
       const audioContext = new AudioContext();
       const destination = audioContext.createMediaStreamDestination();
@@ -313,7 +294,6 @@ const AudioConverter = () => {
       
       recorder.onerror = reject;
       
-      // Play the buffer through the recorder
       const source = audioContext.createBufferSource();
       source.buffer = audioBuffer;
       source.connect(destination);
@@ -343,7 +323,7 @@ const AudioConverter = () => {
     URL.revokeObjectURL(url);
 
     toast({
-      title: "Download Started",
+      title: "Download Started 📥",
       description: `${originalName}_converted.${settings.format}`,
     });
   };
@@ -351,7 +331,6 @@ const AudioConverter = () => {
   const updateSettings = (key: keyof ConversionSettings, value: any) => {
     setSettings(prev => ({ ...prev, [key]: value }));
     
-    // Auto-update related settings based on quality
     if (key === 'quality') {
       const preset = qualityPresets[value as keyof typeof qualityPresets];
       setSettings(prev => ({
@@ -388,251 +367,229 @@ const AudioConverter = () => {
   };
 
   return (
-    <div className="min-h-screen bg-win98-bg overflow-hidden">
-      <div className="h-screen flex flex-col">
-        {/* Title Bar */}
-        <div className="win98-title-bar flex items-center justify-between px-2 py-1">
-          <div className="flex items-center">
-            <FileAudio className="h-4 w-4 mr-2" />
-            <span className="font-bold">Audio Converter - Universal Format Support</span>
-          </div>
-          <button
-            onClick={handleBackClick}
-            className="win98-btn-sm px-2 py-1"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="flex-1 p-4 overflow-y-auto">
-          {/* File Upload Section */}
-          <div className="bg-white p-4 mb-4 win98-panel">
-            <h3 className="text-sm font-medium text-black mb-3 flex items-center">
-              <Upload className="h-4 w-4 mr-2" />
-              Select Audio File
-            </h3>
-            
-            <div className="flex flex-col gap-4">
-              <div 
-                className="border-2 border-dashed border-gray-300 rounded p-8 text-center cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={() => fileInputRef.current?.click()}
+    <div className="min-h-screen bg-win98-desktop flex flex-col overflow-hidden">
+      <div className="flex-grow p-4 relative">
+        <div className="win98-window max-w-4xl mx-auto w-full">
+          <div className="win98-window-title">
+            <div className="flex items-center gap-2">
+              <button 
+                className="win98-btn px-2 py-0.5 h-6 text-xs flex items-center" 
+                onClick={handleBackClick}
               >
-                {isLoading ? (
-                  <div className="flex items-center justify-center">
-                    <RefreshCw className="h-6 w-6 animate-spin mr-2" />
-                    <span className="text-gray-600">Analyzing audio file...</span>
-                  </div>
-                ) : audioFile ? (
-                  <div className="space-y-2">
-                    <FileAudio className="h-12 w-12 mx-auto text-blue-500" />
-                    <div className="text-black font-medium">{audioFile.name}</div>
-                    <div className="text-sm text-gray-600 space-y-1">
-                      <div>Format: {audioFile.format.toUpperCase()}</div>
-                      <div>Size: {formatFileSize(audioFile.size)}</div>
-                      <div>Duration: {formatDuration(audioFile.duration)}</div>
-                      <div>Sample Rate: {audioFile.sampleRate} Hz</div>
-                      <div>Channels: {audioFile.channels}</div>
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <Upload className="h-12 w-12 mx-auto text-gray-400 mb-2" />
-                    <div className="text-gray-600 mb-2">Drop audio file here or click to browse</div>
-                    <div className="text-xs text-gray-500">
-                      Supports: {supportedFormats.input.map(f => f.toUpperCase()).join(', ')}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="audio/*"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
+                ← Back
+              </button>
+              <div className="font-ms-sans">🔄 Audio Converter</div>
+            </div>
+            <div className="flex gap-1">
+              <button className="bg-win98-gray text-win98-text w-5 h-5 flex items-center justify-center border border-win98-btnshadow leading-none">_</button>
+              <button className="bg-win98-gray text-win98-text w-5 h-5 flex items-center justify-center border border-win98-btnshadow leading-none">□</button>
+              <button 
+                onClick={handleBackClick} 
+                className="bg-win98-gray text-win98-text w-5 h-5 flex items-center justify-center border border-win98-btnshadow leading-none hover:bg-red-100"
+              >
+                ×
+              </button>
             </div>
           </div>
 
-          {/* Conversion Settings */}
-          {audioFile && (
-            <div className="bg-white p-4 mb-4 win98-panel">
-              <h3 className="text-sm font-medium text-black mb-3 flex items-center">
-                <Settings className="h-4 w-4 mr-2" />
-                Conversion Settings
+          <div className="bg-white min-h-[600px] p-4 overflow-y-auto">
+            {/* File Upload Section */}
+            <div className="bg-gray-100 p-4 mb-4 border-2 border-gray-300" style={{
+              borderTopColor: '#dfdfdf',
+              borderLeftColor: '#dfdfdf',
+              borderRightColor: '#808080',
+              borderBottomColor: '#808080'
+            }}>
+              <h3 className="text-sm font-bold text-black mb-3 flex items-center">
+                <Upload className="h-4 w-4 mr-2" />
+                Select Audio File
               </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Output Format */}
-                <div>
-                  <label className="block text-xs text-gray-600 mb-2">Output Format</label>
-                  <select
-                    value={settings.format}
-                    onChange={(e) => updateSettings('format', e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded text-black"
-                  >
-                    {supportedFormats.output.map(format => (
-                      <option key={format} value={format}>
-                        {format.toUpperCase()}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="text-xs text-gray-500 mt-1">
-                    {formatDescriptions[settings.format]}
-                  </div>
-                </div>
-
-                {/* Quality Preset */}
-                <div>
-                  <label className="block text-xs text-gray-600 mb-2">Quality Preset</label>
-                  <select
-                    value={settings.quality}
-                    onChange={(e) => updateSettings('quality', e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded text-black"
-                  >
-                    <option value="low">Low Quality (96 kbps)</option>
-                    <option value="medium">Medium Quality (128 kbps)</option>
-                    <option value="high">High Quality (192 kbps)</option>
-                    <option value="lossless">Lossless (320 kbps)</option>
-                  </select>
-                </div>
-
-                {/* Advanced Settings Toggle */}
-                <div className="md:col-span-2">
-                  <button
-                    onClick={() => setShowAdvanced(!showAdvanced)}
-                    className="win98-btn px-3 py-1 text-xs"
-                  >
-                    {showAdvanced ? 'Hide' : 'Show'} Advanced Settings
-                  </button>
-                </div>
-
-                {/* Advanced Settings */}
-                {showAdvanced && (
-                  <>
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-2">Sample Rate (Hz)</label>
-                      <select
-                        value={settings.sampleRate}
-                        onChange={(e) => updateSettings('sampleRate', parseInt(e.target.value))}
-                        className="w-full p-2 border border-gray-300 rounded text-black"
-                      >
-                        <option value={22050}>22,050 Hz</option>
-                        <option value={44100}>44,100 Hz</option>
-                        <option value={48000}>48,000 Hz</option>
-                        <option value={96000}>96,000 Hz</option>
-                      </select>
+              
+              <div className="flex flex-col gap-4">
+                <div 
+                  className="border-2 border-dashed border-gray-400 p-8 text-center cursor-pointer hover:bg-gray-50 transition-colors bg-white"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {isLoading ? (
+                    <div className="flex items-center justify-center">
+                      <RefreshCw className="h-6 w-6 animate-spin mr-2" />
+                      <span className="text-gray-700">Analyzing audio file...</span>
                     </div>
-
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-2">Channels</label>
-                      <select
-                        value={settings.channels}
-                        onChange={(e) => updateSettings('channels', parseInt(e.target.value))}
-                        className="w-full p-2 border border-gray-300 rounded text-black"
-                      >
-                        <option value={1}>Mono</option>
-                        <option value={2}>Stereo</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-2">Bit Rate (kbps)</label>
-                      <input
-                        type="range"
-                        min="64"
-                        max="320"
-                        step="16"
-                        value={settings.bitRate}
-                        onChange={(e) => updateSettings('bitRate', parseInt(e.target.value))}
-                        className="w-full"
-                      />
-                      <div className="text-xs text-gray-500 text-center mt-1">
-                        {settings.bitRate} kbps
+                  ) : audioFile ? (
+                    <div className="space-y-2">
+                      <FileAudio className="h-12 w-12 mx-auto text-blue-600" />
+                      <div className="text-black font-bold">{audioFile.name}</div>
+                      <div className="text-sm text-gray-700 space-y-1">
+                        <div>Format: {audioFile.format.toUpperCase()}</div>
+                        <div>Size: {formatFileSize(audioFile.size)}</div>
+                        <div>Duration: {formatDuration(audioFile.duration)}</div>
                       </div>
                     </div>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Conversion Controls */}
-          {audioFile && (
-            <div className="bg-white p-4 mb-4 win98-panel">
-              <div className="flex flex-col gap-4">
-                <button
-                  onClick={convertAudio}
-                  disabled={isConverting}
-                  className="win98-btn px-4 py-2 text-black disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                >
-                  {isConverting ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                      Converting... {conversionProgress}%
-                    </>
                   ) : (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Convert to {settings.format.toUpperCase()}
-                    </>
+                    <div>
+                      <Upload className="h-12 w-12 mx-auto text-gray-500 mb-2" />
+                      <div className="text-gray-700 mb-2 font-bold">Drop audio file here or click to browse</div>
+                      <div className="text-xs text-gray-600">
+                        Supports: {supportedFormats.input.map(f => f.toUpperCase()).join(', ')}
+                      </div>
+                      <div className="text-xs text-red-600 mt-1">
+                        Maximum file size: 25MB
+                      </div>
+                    </div>
                   )}
-                </button>
+                </div>
 
-                {/* Progress Bar */}
-                {isConverting && (
-                  <div className="w-full bg-gray-200 rounded">
-                    <div 
-                      className="bg-blue-500 rounded h-2 transition-all duration-300"
-                      style={{ width: `${conversionProgress}%` }}
-                    />
-                  </div>
-                )}
-
-                {/* Download Button */}
-                {convertedBlob && (
-                  <button
-                    onClick={downloadConverted}
-                    className="win98-btn px-4 py-2 text-black flex items-center justify-center bg-green-50 hover:bg-green-100"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Download Converted File
-                  </button>
-                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="audio/*"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
               </div>
             </div>
-          )}
 
-          {/* Format Support Info */}
-          <div className="bg-white p-4 win98-panel">
-            <h3 className="text-sm font-medium text-black mb-3 flex items-center">
-              <Info className="h-4 w-4 mr-2" />
-              Supported Formats
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-              <div>
-                <div className="font-medium text-gray-700 mb-2">Input Formats:</div>
-                <div className="space-y-1">
-                  {supportedFormats.input.map(format => (
-                    <div key={format} className="text-gray-600">
-                      • {format.toUpperCase()}
+            {/* Conversion Settings */}
+            {audioFile && (
+              <div className="bg-gray-100 p-4 mb-4 border-2 border-gray-300" style={{
+                borderTopColor: '#dfdfdf',
+                borderLeftColor: '#dfdfdf',
+                borderRightColor: '#808080',
+                borderBottomColor: '#808080'
+              }}>
+                <h3 className="text-sm font-bold text-black mb-3 flex items-center">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Conversion Settings
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-2">Output Format</label>
+                    <select
+                      value={settings.format}
+                      onChange={(e) => updateSettings('format', e.target.value)}
+                      className="w-full p-2 border-2 border-gray-400 text-black"
+                      style={{
+                        borderTopColor: '#808080',
+                        borderLeftColor: '#808080',
+                        borderRightColor: '#dfdfdf',
+                        borderBottomColor: '#dfdfdf'
+                      }}
+                    >
+                      {supportedFormats.output.map(format => (
+                        <option key={format} value={format}>
+                          {format.toUpperCase()}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="text-xs text-gray-600 mt-1">
+                      {formatDescriptions[settings.format]}
                     </div>
-                  ))}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-2">Quality Preset</label>
+                    <select
+                      value={settings.quality}
+                      onChange={(e) => updateSettings('quality', e.target.value)}
+                      className="w-full p-2 border-2 border-gray-400 text-black"
+                      style={{
+                        borderTopColor: '#808080',
+                        borderLeftColor: '#808080',
+                        borderRightColor: '#dfdfdf',
+                        borderBottomColor: '#dfdfdf'
+                      }}
+                    >
+                      <option value="low">Low Quality (96 kbps)</option>
+                      <option value="medium">Medium Quality (128 kbps)</option>
+                      <option value="high">High Quality (192 kbps)</option>
+                      <option value="lossless">Lossless (320 kbps)</option>
+                    </select>
+                  </div>
                 </div>
               </div>
+            )}
+
+            {/* Conversion Controls */}
+            {audioFile && (
+              <div className="bg-gray-100 p-4 mb-4 border-2 border-gray-300" style={{
+                borderTopColor: '#dfdfdf',
+                borderLeftColor: '#dfdfdf',
+                borderRightColor: '#808080',
+                borderBottomColor: '#808080'
+              }}>
+                <div className="flex flex-col gap-4">
+                  <button
+                    onClick={convertAudio}
+                    disabled={isConverting}
+                    className="win98-btn px-4 py-3 text-black disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-bold"
+                  >
+                    {isConverting ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                        Converting... {conversionProgress}%
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Convert to {settings.format.toUpperCase()}
+                      </>
+                    )}
+                  </button>
+
+                  {isConverting && (
+                    <div className="w-full bg-gray-300 border-2 border-gray-400" style={{
+                      borderTopColor: '#808080',
+                      borderLeftColor: '#808080',
+                      borderRightColor: '#dfdfdf',
+                      borderBottomColor: '#dfdfdf'
+                    }}>
+                      <div 
+                        className="bg-blue-600 h-4 transition-all duration-300"
+                        style={{ width: `${conversionProgress}%` }}
+                      />
+                    </div>
+                  )}
+
+                  {convertedBlob && (
+                    <button
+                      onClick={downloadConverted}
+                      className="win98-btn px-4 py-3 text-black flex items-center justify-center font-bold bg-green-100"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download Converted File
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Format Support Info */}
+            <div className="bg-gray-100 p-4 border-2 border-gray-300" style={{
+              borderTopColor: '#dfdfdf',
+              borderLeftColor: '#dfdfdf',
+              borderRightColor: '#808080',
+              borderBottomColor: '#808080'
+            }}>
+              <h3 className="text-sm font-bold text-black mb-3 flex items-center">
+                <Info className="h-4 w-4 mr-2" />
+                Supported Formats & Notes
+              </h3>
               
-              <div>
-                <div className="font-medium text-gray-700 mb-2">Output Formats:</div>
-                <div className="space-y-1">
-                  {supportedFormats.output.map(format => (
-                    <div key={format} className="text-gray-600">
-                      • {format.toUpperCase()} - {formatDescriptions[format as keyof typeof formatDescriptions]}
-                    </div>
-                  ))}
-                </div>
+              <div className="text-xs text-gray-700 space-y-2">
+                <div><strong>Input:</strong> {supportedFormats.input.map(f => f.toUpperCase()).join(', ')}</div>
+                <div><strong>Output:</strong> {supportedFormats.output.map(f => f.toUpperCase()).join(', ')}</div>
+                <div><strong>Note:</strong> For browser stability, only WAV and WebM output are supported. WAV provides the best quality.</div>
+                <div><strong>Limit:</strong> Maximum file size is 25MB to prevent browser crashes.</div>
               </div>
+            </div>
+          </div>
+
+          {/* Status Bar */}
+          <div className="bg-win98-gray border-t border-win98-btnshadow p-1 text-xs text-gray-700 flex items-center">
+            <span>🔄 Audio Converter - Convert between audio formats safely</span>
+            <div className="ml-auto">
+              {audioFile && <span>File: {audioFile.name}</span>}
             </div>
           </div>
         </div>

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Win98Taskbar from '../../components/Win98Taskbar';
 import { useToast } from "@/components/ui/use-toast";
-import { Upload, Play, Pause, Volume2, VolumeX, BarChart3, Activity, Settings, Eye } from 'lucide-react';
+import { Upload, Play, Pause, Volume2, VolumeX, BarChart3, Activity, Settings, Eye, Info } from 'lucide-react';
 
 type VisualizationType = 'bars' | 'waveform' | 'circular' | 'waterfall' | 'oscilloscope' | 'spectrum3d';
 
@@ -560,21 +560,30 @@ const AudioVisualizer = () => {
   }, [settings.type, settings.barCount, settings.sensitivity, settings.colorScheme]);
 
   return (
-    <div className="min-h-screen bg-win98-bg overflow-hidden">
-      <div className="h-screen flex flex-col">
-        {/* Title Bar */}
-        <div className="win98-title-bar flex items-center justify-between px-2 py-1">
-          <div className="flex items-center">
-            <BarChart3 className="h-4 w-4 mr-2" />
-            <span className="font-bold">Audio Visualizer - Real-time Spectrum Analysis</span>
+    <div className="min-h-screen bg-win98-desktop flex flex-col overflow-hidden">
+      <div className="flex-grow p-4 relative">
+        <div className="win98-window max-w-6xl mx-auto w-full">
+          <div className="win98-window-title">
+            <div className="flex items-center gap-2">
+              <button 
+                className="win98-btn px-2 py-0.5 h-6 text-xs flex items-center" 
+                onClick={handleBackClick}
+              >
+                ← Back
+              </button>
+              <div className="font-ms-sans">📊 Audio Visualizer</div>
+            </div>
+            <div className="flex gap-1">
+              <button className="bg-win98-gray text-win98-text w-5 h-5 flex items-center justify-center border border-win98-btnshadow leading-none">_</button>
+              <button className="bg-win98-gray text-win98-text w-5 h-5 flex items-center justify-center border border-win98-btnshadow leading-none">□</button>
+              <button 
+                onClick={handleBackClick} 
+                className="bg-win98-gray text-win98-text w-5 h-5 flex items-center justify-center border border-win98-btnshadow leading-none hover:bg-red-100"
+              >
+                ×
+              </button>
+            </div>
           </div>
-          <button
-            onClick={handleBackClick}
-            className="win98-btn-sm px-2 py-1"
-          >
-            ✕
-          </button>
-        </div>
 
         <div className="flex-1 p-4 overflow-y-auto">
           {/* Visualization Canvas */}
@@ -800,18 +809,35 @@ const AudioVisualizer = () => {
           </div>
 
           {/* Instructions */}
-          <div className="bg-white p-4 win98-panel">
-            <h3 className="text-sm font-medium text-black mb-3">Instructions</h3>
-            <div className="text-xs text-gray-600 space-y-1">
-              <div>• Load an audio file or use your microphone as input</div>
-              <div>• Choose from different visualization types: bars, waveform, circular, waterfall, oscilloscope, 3D</div>
-              <div>• Adjust FFT size for frequency resolution (higher = more detail)</div>
-              <div>• Use smoothing to reduce flickering</div>
-              <div>• Increase sensitivity to amplify visualization amplitude</div>
-              <div>• Try different color schemes for various visual effects</div>
+          <div className="bg-gray-100 p-4 border-2 border-gray-300" style={{
+            borderTopColor: '#dfdfdf',
+            borderLeftColor: '#dfdfdf',
+            borderRightColor: '#808080',
+            borderBottomColor: '#808080'
+          }}>
+            <h3 className="text-sm font-bold text-black mb-3 flex items-center">
+              <Info className="h-4 w-4 mr-2" />
+              Instructions & Tips
+            </h3>
+            <div className="text-xs text-gray-700 space-y-2">
+              <div><strong>Audio Input:</strong> Load a file or use microphone for real-time visualization</div>
+              <div><strong>Visualization Types:</strong> Bars, waveform, circular, waterfall, oscilloscope, 3D spectrum</div>
+              <div><strong>FFT Size:</strong> Higher values = more frequency detail but slower performance</div>
+              <div><strong>Smoothing:</strong> Reduces flickering in visualization</div>
+              <div><strong>Sensitivity:</strong> Amplifies visualization amplitude</div>
+              <div><strong>Color Schemes:</strong> Choose from rainbow, fire, ocean, neon, or vintage themes</div>
             </div>
           </div>
         </div>
+
+                 {/* Status Bar */}
+         <div className="bg-win98-gray border-t border-win98-btnshadow p-1 text-xs text-gray-700 flex items-center">
+           <span>📊 Audio Visualizer - Real-time spectrum analysis</span>
+           <div className="ml-auto">
+             {audioFile && <span>File: {audioFile.name}</span>}
+             {isUsingMicrophone && <span>🎤 Microphone Active</span>}
+           </div>
+         </div>
 
         <audio
           ref={audioRef}
@@ -820,8 +846,9 @@ const AudioVisualizer = () => {
           preload="metadata"
         />
       </div>
-      <Win98Taskbar />
     </div>
+    <Win98Taskbar />
+  </div>
   );
 };
 
