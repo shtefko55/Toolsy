@@ -12,6 +12,8 @@ interface VideoInfo {
   uploadDate: string;
   description: string;
   availableQualities: string[];
+  platform?: string;
+  platformIcon?: string;
 }
 
 interface DownloadStatus {
@@ -23,7 +25,7 @@ interface DownloadStatus {
   error?: string;
 }
 
-const YTDownloader = () => {
+const VideoDownloader = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const socketRef = useRef<Socket | null>(null);
@@ -40,7 +42,7 @@ const YTDownloader = () => {
 
   // Initialize Socket.IO connection
   useEffect(() => {
-    console.log('🔗 Connecting to YouTube Downloader server...');
+    console.log('🔗 Connecting to Multi-Platform Video Downloader server...');
     
     socketRef.current = io(BACKEND_URL, {
       transports: ['websocket', 'polling'],
@@ -50,10 +52,10 @@ const YTDownloader = () => {
 
     socketRef.current.on('connect', () => {
       setServerStatus('connected');
-      console.log('✅ Connected to YouTube Downloader server');
+      console.log('✅ Connected to Multi-Platform Video Downloader server');
       toast({
-        title: "YT Server Connected ✅",
-        description: "YouTube downloader is ready",
+        title: "Video Server Connected ✅",
+        description: "Multi-platform video downloader is ready",
       });
     });
 
@@ -61,8 +63,8 @@ const YTDownloader = () => {
       setServerStatus('disconnected');
       console.error('❌ YT Server connection error:', error);
       toast({
-        title: "YT Server Error ❌",
-        description: "Failed to connect to YouTube downloader",
+        title: "Video Server Error ❌",
+        description: "Failed to connect to video downloader",
       });
     });
 
@@ -83,7 +85,7 @@ const YTDownloader = () => {
           const downloadUrl = `${BACKEND_URL}${data.downloadUrl}`;
           const link = document.createElement('a');
           link.href = downloadUrl;
-          link.download = `youtube_video_${Date.now()}.${selectedFormat}`;
+          link.download = `video_${Date.now()}.${selectedFormat}`;
           link.style.display = 'none';
           document.body.appendChild(link);
           link.click();
@@ -91,7 +93,7 @@ const YTDownloader = () => {
           
           toast({
             title: "Download Complete 📥",
-            description: "Your YouTube video has been downloaded",
+            description: "Your video has been downloaded",
           });
         }, 1000);
       }
@@ -108,7 +110,7 @@ const YTDownloader = () => {
     if (!url.trim()) {
       toast({
         title: "Invalid URL ❌",
-        description: "Please enter a YouTube URL",
+        description: "Please enter a video URL from YouTube, Instagram, Facebook, or X",
       });
       return;
     }
@@ -254,8 +256,8 @@ const YTDownloader = () => {
         {/* Title Bar */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white px-2 py-1 text-sm flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <span className="text-lg">📺</span>
-            <span className="font-bold">YT DW - YouTube Downloader</span>
+            <span className="text-lg">📹</span>
+            <span className="font-bold">VIDEO DWN - Multi-Platform Video Downloader</span>
           </div>
           <div className="flex gap-1">
             <button 
@@ -298,13 +300,13 @@ const YTDownloader = () => {
             borderRightColor: '#ffffff',
             borderBottomColor: '#ffffff'
           }}>
-            <div className="text-sm font-bold mb-2">📋 YouTube URL:</div>
+            <div className="text-sm font-bold mb-2">📋 Video URL (YouTube, Instagram, Facebook, X):</div>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://www.youtube.com/watch?v=..."
+                placeholder="https://youtube.com/watch?v=... or https://instagram.com/p/... or https://x.com/..."
                 className="flex-1 px-2 py-1 border-2 border-gray-600 text-sm"
                 style={{
                   borderTopColor: '#808080',
@@ -346,6 +348,13 @@ const YTDownloader = () => {
                 />
                 <div className="flex-1 text-xs">
                   <div className="font-bold mb-1">{videoInfo.title}</div>
+                  {videoInfo.platform && (
+                    <div className="mb-1">
+                      <span className="bg-blue-600 text-white px-2 py-1 rounded text-xs">
+                        {videoInfo.platformIcon} {videoInfo.platform}
+                      </span>
+                    </div>
+                  )}
                   <div>👤 {videoInfo.author}</div>
                   <div>⏱️ {formatDuration(videoInfo.duration)}</div>
                   <div>👀 {parseInt(videoInfo.viewCount).toLocaleString()} views</div>
@@ -466,7 +475,7 @@ const YTDownloader = () => {
 
         {/* Bottom Status Bar */}
         <div className="bg-gray-300 border-t border-gray-600 px-3 py-1 text-xs flex justify-between items-center">
-          <span>YT DW v1.0 - Educational Use Only</span>
+          <span>VIDEO DWN v2.0 - Educational Use Only | 📹 YouTube • 📷 Instagram • 👥 Facebook • 🐦 X</span>
           <span>{new Date().toLocaleTimeString()}</span>
         </div>
       </div>
@@ -474,4 +483,4 @@ const YTDownloader = () => {
   );
 };
 
-export default YTDownloader; 
+export default VideoDownloader; 

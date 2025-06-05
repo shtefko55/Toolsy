@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "start-yt": "node youtube-server.js",
+    "start-video": "node video-server.js",
     "dev": "nodemon server.js",
     "dev-yt": "nodemon youtube-server.js"
   },
@@ -21,6 +22,7 @@
   "dependencies": {
     "@distube/ytdl-core": "^4.16.11",
     "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
     "express": "^4.18.2",
     "fluent-ffmpeg": "^2.1.2",
     "fs-extra": "^11.1.1",
