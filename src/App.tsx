@@ -19,6 +19,7 @@ import AudioConverter from "./pages/audio-tools/AudioConverter";
 import AudioConverterServer from "./pages/audio-tools/AudioConverterServer";
 import AudioNormalizer from "./pages/audio-tools/AudioNormalizer";
 import AudioVisualizer from "./pages/audio-tools/AudioVisualizer";
+import YTDownloader from "./pages/YTDownloader";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,7 @@ const App = () => {
             <Route path="/audio-tools/audio-visualizer" element={<AudioVisualizer />} />
             <Route path="/image-tools" element={<ImageTools />} />
             <Route path="/image-tools/image-compressor" element={<ImageCompressor />} />
+            <Route path="/yt-downloader" element={<YTDownloader />} />
             <Route path="*" element={<div>404 - Page Not Found</div>} />
           </Routes>
         </BrowserRouter>
