@@ -13,15 +13,19 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:5173", "http://localhost:3000"],
-    methods: ["GET", "POST"]
+    origin: ["http://localhost:5173", "http://localhost:3000", "http://localhost:4173", "http://localhost:8080", "http://localhost:8081", "http://localhost:8082"],
+    methods: ["GET", "POST"],
+    credentials: true
   }
 });
 
 const PORT = process.env.PORT || 3001;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ["http://localhost:5173", "http://localhost:3000", "http://localhost:4173", "http://localhost:8080", "http://localhost:8081", "http://localhost:8082"],
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.static('public'));
 
@@ -293,17 +297,50 @@ app.get('/api/download/:conversionId', (req, res) => {
 
   const fileName = `${path.parse(conversion.originalName).name}_converted${path.extname(conversion.outputPath)}`;
   
-  res.download(conversion.outputPath, fileName, (err) => {
-    if (err) {
-      console.error('Download error:', err);
-    } else {
-      // Clean up output file after download
-      setTimeout(() => {
-        fs.removeSync(conversion.outputPath);
-        activeConversions.delete(conversionId);
-      }, 5000);
+  // Handle request abortion
+  req.on('aborted', () => {
+    console.log(`Download aborted by client: ${conversionId}`);
+  });
+  
+  res.on('close', () => {
+    console.log(`Download connection closed: ${conversionId}`);
+  });
+  
+  // Set appropriate headers for download
+  res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+  res.setHeader('Content-Type', 'application/octet-stream');
+  
+  try {
+    const stats = fs.statSync(conversion.outputPath);
+    res.setHeader('Content-Length', stats.size);
+  } catch (err) {
+    console.error('Error getting file stats:', err);
+  }
+  
+  // Use stream instead of res.download for better control
+  const stream = fs.createReadStream(conversion.outputPath);
+  
+  stream.on('error', (err) => {
+    console.error('Stream error:', err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Stream error' });
     }
   });
+  
+  stream.on('end', () => {
+    console.log(`Download completed successfully: ${conversionId}`);
+    // Clean up output file after successful download
+    setTimeout(() => {
+      try {
+        fs.removeSync(conversion.outputPath);
+        activeConversions.delete(conversionId);
+      } catch (err) {
+        console.error('Cleanup error:', err);
+      }
+    }, 5000);
+  });
+  
+  stream.pipe(res);
 });
 
 // Get conversion status

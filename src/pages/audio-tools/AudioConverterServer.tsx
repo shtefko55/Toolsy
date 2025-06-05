@@ -66,21 +66,62 @@ const AudioConverterServer = () => {
 
   // Initialize Socket.IO connection
   useEffect(() => {
+    console.log('Initializing connection to:', BACKEND_URL);
+    
     // Connect to backend
-    socketRef.current = io(BACKEND_URL);
+    socketRef.current = io(BACKEND_URL, {
+      transports: ['websocket', 'polling'],
+      timeout: 10000,
+      forceNew: true
+    });
 
     socketRef.current.on('connect', () => {
       setServerStatus('connected');
-      console.log('Connected to audio conversion server');
+      console.log('✅ Connected to audio conversion server');
+      toast({
+        title: "Server Connected ✅",
+        description: "Audio conversion server is ready",
+      });
     });
 
-    socketRef.current.on('disconnect', () => {
+    socketRef.current.on('connect_error', (error) => {
       setServerStatus('disconnected');
-      console.log('Disconnected from server');
+      console.error('❌ Connection error:', error);
+      toast({
+        title: "Connection Error ❌",
+        description: "Failed to connect to conversion server",
+      });
+    });
+
+    socketRef.current.on('disconnect', (reason) => {
+      setServerStatus('disconnected');
+      console.log('🔌 Disconnected from server:', reason);
     });
 
     socketRef.current.on('conversionProgress', (data) => {
+      console.log('📊 Progress update:', data);
       setConversionStatus(prev => prev ? { ...prev, ...data } : data);
+      
+      // Auto-download when completed
+      if (data.status === 'completed' && data.downloadUrl) {
+        console.log('🔗 Auto-downloading converted file:', data.downloadUrl);
+        
+        setTimeout(() => {
+          const downloadUrl = `${BACKEND_URL}${data.downloadUrl}`;
+          const link = document.createElement('a');
+          link.href = downloadUrl;
+          link.download = `converted_${Date.now()}.${settings.format}`;
+          link.style.display = 'none';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          toast({
+            title: "Download Started 📥",
+            description: "Your converted file is downloading automatically",
+          });
+        }, 1000); // Small delay to ensure server is ready
+      }
     });
 
     // Fetch supported formats
@@ -95,11 +136,22 @@ const AudioConverterServer = () => {
 
   const fetchSupportedFormats = async () => {
     try {
+      console.log('🔍 Fetching supported formats from:', `${BACKEND_URL}/api/formats`);
       const response = await fetch(`${BACKEND_URL}/api/formats`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
       const formats = await response.json();
+      console.log('📋 Supported formats:', formats);
       setSupportedFormats(formats);
     } catch (error) {
-      console.error('Failed to fetch supported formats:', error);
+      console.error('❌ Failed to fetch supported formats:', error);
+      toast({
+        title: "Server Error ⚠️",
+        description: "Could not fetch supported formats. Check if server is running.",
+      });
     }
   };
 
