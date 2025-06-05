@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const fs = require('fs-extra');
 const path = require('path');
-const ytdl = require('ytdl-core');
+const ytdl = require('@distube/ytdl-core');
 const { v4: uuidv4 } = require('uuid');
 const { Server } = require('socket.io');
 const http = require('http');
@@ -69,19 +69,37 @@ app.post('/api/video-info', async (req, res) => {
 
     console.log('🔍 Getting video info for:', url);
     
-    const info = await ytdl.getInfo(url);
+    // Configure ytdl with better options
+    const info = await ytdl.getInfo(url, {
+      requestOptions: {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+      }
+    });
     const videoDetails = info.videoDetails;
     
-    // Get available formats
-    const formats = ytdl.filterFormats(info, 'videoandaudio');
-    const audioFormats = ytdl.filterFormats(info, 'audioonly');
+    // Get available formats with better error handling
+    let formats = [];
+    let audioFormats = [];
+    
+    try {
+      if (info.formats && Array.isArray(info.formats)) {
+        formats = info.formats.filter(f => f.hasVideo && f.hasAudio);
+        audioFormats = info.formats.filter(f => f.hasAudio && !f.hasVideo);
+      }
+    } catch (err) {
+      console.error('Format filtering error:', err);
+      formats = [];
+      audioFormats = [];
+    }
     
     const availableQualities = [
       ...new Set([
         ...formats.map(f => f.qualityLabel).filter(q => q),
-        ...audioFormats.map(f => 'Audio Only').filter(q => q)
+        'Audio Only'
       ])
-    ];
+    ].filter(Boolean);
 
     res.json({
       title: videoDetails.title,
@@ -127,8 +145,14 @@ app.post('/api/download', async (req, res) => {
     const downloadId = uuidv4();
     console.log(`🚀 Starting download ${downloadId}: ${url}`);
     
-    // Get video info
-    const info = await ytdl.getInfo(url);
+    // Get video info with better options
+    const info = await ytdl.getInfo(url, {
+      requestOptions: {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+      }
+    });
     const videoDetails = info.videoDetails;
     
     // Create safe filename
@@ -162,25 +186,54 @@ app.post('/api/download', async (req, res) => {
     let totalSize = 0;
     let downloadedSize = 0;
     
-    // Choose format based on quality
+    // Choose format based on quality with better error handling
     let chosenFormat;
-    if (quality === 'audio') {
-      chosenFormat = ytdl.chooseFormat(info, { quality: 'highestaudio' });
-    } else {
-      chosenFormat = ytdl.chooseFormat(info, { 
-        quality: quality === 'highest' ? 'highest' : quality,
-        filter: 'videoandaudio'
-      });
+    try {
+      if (quality === 'audio') {
+        // Find best audio format
+        chosenFormat = info.formats
+          .filter(f => f.hasAudio && !f.hasVideo)
+          .sort((a, b) => (b.audioBitrate || 0) - (a.audioBitrate || 0))[0];
+      } else {
+        // Find best video+audio format
+        const videoFormats = info.formats.filter(f => f.hasVideo && f.hasAudio);
+        if (quality === 'highest') {
+          chosenFormat = videoFormats
+            .sort((a, b) => (b.height || 0) - (a.height || 0))[0];
+        } else {
+          // Try to find specific quality
+          const targetHeight = quality === '720p' ? 720 : quality === '480p' ? 480 : quality === '360p' ? 360 : 1080;
+          chosenFormat = videoFormats
+            .filter(f => f.height <= targetHeight)
+            .sort((a, b) => (b.height || 0) - (a.height || 0))[0] || videoFormats[0];
+        }
+      }
+      
+      // Fallback to any available format
+      if (!chosenFormat) {
+        chosenFormat = info.formats.filter(f => f.hasAudio)[0];
+      }
+    } catch (err) {
+      console.error('Format selection error:', err);
+      chosenFormat = info.formats[0]; // Last resort fallback
     }
     
     totalSize = parseInt(chosenFormat.contentLength) || 0;
     
+    console.log('Selected format:', {
+      itag: chosenFormat.itag,
+      quality: chosenFormat.qualityLabel,
+      hasVideo: chosenFormat.hasVideo,
+      hasAudio: chosenFormat.hasAudio,
+      container: chosenFormat.container
+    });
+    
     // Create download stream
     const stream = ytdl(url, { 
-      format: chosenFormat,
+      quality: chosenFormat.itag,
       requestOptions: {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
       }
     });
