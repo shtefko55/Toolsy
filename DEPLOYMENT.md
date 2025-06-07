@@ -60,14 +60,14 @@ This guide will help you deploy the Retro Web Portal 98 to your VPS using Docker
 6. **Logout and login again** (to apply Docker group changes):
    ```bash
    exit
-   ssh your-username@your-server-ip
+   ssh root@69.62.115.146
    ```
 
 ### Step 2: Deploy the Application
 
 1. **Clone the repository:**
    ```bash
-   git clone <your-repository-url>
+   git https://github.com/shtefko55/Toolzi.git>
    cd retro-web-portal-98
    ```
 
@@ -120,7 +120,7 @@ This guide will help you deploy the Retro Web Portal 98 to your VPS using Docker
    sudo apt install -y nginx
    
    # Get SSL certificate
-   sudo certbot --nginx -d your-domain.com
+   sudo certbot --nginx -d http://69.62.115.146/
    
    # Update nginx configuration for SSL
    # Then restart with SSL-enabled docker-compose
