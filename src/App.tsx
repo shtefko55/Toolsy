@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import TestPage from "./pages/TestPage";
 import TextTools from "./pages/TextTools";
+import PDFTools from "./pages/PDFTools";
 import AudioTools from "./pages/AudioTools";
 import ImageTools from "./pages/ImageToolsSimple";
 import ImageCompressor from "./pages/image-tools/ImageCompressor";
@@ -34,6 +35,7 @@ const App = () => {
             <Route path="/" element={<Index />} />
             <Route path="/test" element={<TestPage />} />
             <Route path="/text-tools" element={<TextTools />} />
+            <Route path="/pdf-tools" element={<PDFTools />} />
             <Route path="/audio-tools" element={<AudioTools />} />
             <Route path="/audio-tools/audio-player" element={<AudioPlayer />} />
             <Route path="/audio-tools/voice-recorder" element={<VoiceRecorder />} />
