@@ -21,6 +21,8 @@ import AudioConverterServer from "./pages/audio-tools/AudioConverterServer";
 import AudioNormalizer from "./pages/audio-tools/AudioNormalizer";
 import AudioVisualizer from "./pages/audio-tools/AudioVisualizer";
 import VideoDownloader from "./pages/VideoDownloader";
+import MergePDF from "./pages/pdf-tools/MergePDF";
+import SplitPDF from "./pages/pdf-tools/SplitPDF";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +38,8 @@ const App = () => {
             <Route path="/test" element={<TestPage />} />
             <Route path="/text-tools" element={<TextTools />} />
             <Route path="/pdf-tools" element={<PDFTools />} />
+            <Route path="/pdf-tools/merge-pdf" element={<MergePDF />} />
+            <Route path="/pdf-tools/split-pdf" element={<SplitPDF />} />
             <Route path="/audio-tools" element={<AudioTools />} />
             <Route path="/audio-tools/audio-player" element={<AudioPlayer />} />
             <Route path="/audio-tools/voice-recorder" element={<VoiceRecorder />} />
